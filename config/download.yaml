@@ -1,0 +1,19 @@
+# 下载配置
+download:
+  # 每批次下载的作品数量 (1-100)
+  batch_size: 30
+
+  # 批次间隔秒数
+  batch_delay: 2.0
+
+  # 并发下载数 (Phase 6 仅支持 1)
+  concurrency: 1
+
+  # 单张图片间隔秒数
+  image_delay: 2.5
+
+  # 单张图片最大重试次数 (1-10)
+  max_retries: 3
+
+  # 重试间隔秒数
+  retry_delay: 5.0
