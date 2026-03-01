@@ -35,7 +35,8 @@ class RankingDownloader:
         client: PixivClient,
         output_dir: Path,
         config: DownloadConfig | None = None,
-        verbose: bool = False
+        verbose: bool = False,
+        output_mode: str = "normal"
     ) -> None:
         """初始化排行榜下载器
 
@@ -44,11 +45,13 @@ class RankingDownloader:
             output_dir: 输出目录 (默认 ./pixiv-downloads/)
             config: 下载配置 (可选,使用默认配置)
             verbose: 是否启用详细模式 (默认 False)
+            output_mode: 输出模式 (normal, json, quiet, 默认 normal)
         """
         self.client = client
         self.output_dir = output_dir
         self.config = config or DownloadConfig()
         self.verbose = verbose
+        self.output_mode = output_mode
 
     def download_ranking(
         self,
@@ -57,8 +60,10 @@ class RankingDownloader:
         path_template: str | None = None,
         enable_resume: bool = True,
         tracker: DownloadTracker | None = None,
+        limit: int | None = None,
+        offset: int = 0,
     ) -> BatchDownloadResult:
-        """下载指定排行榜的所有图片(支持断点续传)
+        """下载指定排行榜的所有图片(支持断点续传和范围控制)
 
         Args:
             mode: 排行榜类型 (day, week, month 等)
@@ -66,6 +71,8 @@ class RankingDownloader:
             path_template: 路径模板字符串 (可选)
             enable_resume: 是否启用断点续传 (默认 True)
             tracker: 下载历史追踪器 (可选,用于增量下载)
+            limit: 最多下载的作品数 (None = 无限制)
+            offset: 跳过的作品数 (默认 0)
 
         Returns:
             BatchDownloadResult: 批量下载结果
@@ -73,14 +80,44 @@ class RankingDownloader:
         Note:
             下载参数 (batch_delay, image_delay, max_retries, retry_delay)
             从 self.config 读取
+
+            当使用 limit 或 offset 时,断点续传会自动禁用,因为:
+            - 分批下载的本质是手动控制范围
+            - offset 与断点续传的 start_index 会产生逻辑冲突
+            - 用户可以通过调整 offset 手动实现"断点续传"效果
         """
-        # 1. 获取排行榜数据(使用 get_ranking_all)
-        if date is None:
-            date = datetime.date.today().strftime("%Y-%m-%d")
+        # 1. 获取排行榜数据(使用 get_ranking_range 支持范围控制)
+        # 注意: 如果用户未指定日期，不传递 date 参数，让 API 使用默认值（最新可用排行榜）
+        # Pixiv 排行榜通常是前一天的，今天的排行榜可能还未生成
+
+        # 如果指定了范围,禁用断点续传
+        if limit is not None or offset > 0:
+            enable_resume = False
+            logger.info(f"分批下载模式: limit={limit}, offset={offset}, 断点续传已禁用")
 
         try:
-            logger.info(f"Fetching ranking: mode={mode}, date={date}")
-            ranking_data = self.client.get_ranking_all(mode=mode, date=date)
+            # 对于日志和断点续传，使用实际请求的日期（如果有）
+            display_date = date if date else "latest"
+            logger.info(f"Fetching ranking: mode={mode}, date={display_date}, limit={limit}, offset={offset}")
+
+            # 使用 get_ranking_range 支持范围控制
+            ranking_data = self.client.get_ranking_range(
+                mode=mode, date=date, limit=limit, offset=offset
+            )
+
+            # 获取数据后，如果 date 为 None，使用获取到的第一个作品的日期作为实际日期
+            # 如果没有获取到数据，使用昨天的日期作为默认值
+            actual_date = date
+            if actual_date is None:
+                if ranking_data and len(ranking_data) > 0:
+                    # 尝试从第一个作品推断日期（但 API 响应中可能没有日期信息）
+                    # 使用昨天的日期作为最佳猜测
+                    import datetime
+                    actual_date = (datetime.date.today() - datetime.timedelta(days=1)).strftime("%Y-%m-%d")
+                else:
+                    # 没有数据时，使用昨天的日期
+                    import datetime
+                    actual_date = (datetime.date.today() - datetime.timedelta(days=1)).strftime("%Y-%m-%d")
         except PixivAPIError as e:
             logger.error(f"API error: {e}")
             # 返回失败结果
@@ -105,7 +142,7 @@ class RankingDownloader:
             )
 
         # 2. 初始化断点续传管理器
-        resume_manager = ResumeManager(self.output_dir, mode, date)
+        resume_manager = ResumeManager(self.output_dir, mode, actual_date)
 
         # 检查是否需要从断点恢复
         start_index = 0
@@ -121,7 +158,7 @@ class RankingDownloader:
 
         # 4. 创建输出目录
         if not template:
-            ranking_dir = self.output_dir / f"{mode}-{date}"
+            ranking_dir = self.output_dir / f"{mode}-{actual_date}"
             ranking_dir.mkdir(parents=True, exist_ok=True)
             logger.info(f"Output directory: {ranking_dir}")
         else:
@@ -130,7 +167,7 @@ class RankingDownloader:
         # 5. 使用 SQLite tracker 过滤已下载作品(优先)
         if tracker:
             all_illust_ids = [illust['id'] for illust in ranking_data]
-            pending_ids = set(tracker.get_pending_illusts(mode, date, all_illust_ids))
+            pending_ids = set(tracker.get_pending_illusts(mode, actual_date, all_illust_ids))
             logger.info(
                 f"Incremental download: {len(pending_ids)}/{len(ranking_data)} pending "
                 f"(skipping {len(ranking_data) - len(pending_ids)} already downloaded)"
@@ -148,8 +185,8 @@ class RankingDownloader:
         # 更新总数
         resume_manager.state.total_count = total_count
 
-        # 初始化进度报告器
-        reporter = ProgressReporter(verbose=self.verbose)
+        # 初始化进度报告器 (根据 output_mode 控制输出)
+        reporter = ProgressReporter(verbose=self.verbose, output_mode=self.output_mode)
 
         for idx, illust in enumerate(ranking_data[start_index:], start=start_index):
             illust_id = illust['id']
@@ -168,7 +205,7 @@ class RankingDownloader:
 
             # 构建文件路径
             filepath = self._build_filepath(
-                illust, metadata, template, mode, date, ranking_dir if not template else None
+                illust, metadata, template, mode, actual_date, ranking_dir if not template else None
             )
 
             logger.info(f"Downloading: {illust['title']} (ID: {illust_id})")
@@ -192,7 +229,7 @@ class RankingDownloader:
                         illust_id=illust_id,
                         file_path=filepath,
                         mode=mode,
-                        date=date,
+                        date=actual_date,
                         file_size=file_size
                     )
             else:

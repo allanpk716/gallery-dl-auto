@@ -184,6 +184,48 @@ class PixivClient:
             logger.error(error_msg)
             raise PixivAPIError(error_msg) from e
 
+    def get_ranking_range(
+        self,
+        mode: str = "day",
+        date: str | None = None,
+        limit: int | None = None,
+        offset: int = 0
+    ) -> list[dict[str, Any]]:
+        """获取排行榜指定范围数据
+
+        复用 get_ranking_all() 获取所有数据,然后在内存中进行切片。
+
+        Args:
+            mode: 排行榜模式
+                - 常规: day, week, month
+                - 分类: day_male, day_female, week_original, week_rookie, day_manga
+                - R18: day_r18, day_male_r18, day_female_r18, week_r18, week_r18g
+            date: 日期字符串 YYYY-MM-DD (None = 最新可用排行榜)
+            limit: 最多获取的作品数 (None = 无限制)
+            offset: 跳过的作品数 (默认 0)
+
+        Returns:
+            作品列表 (已应用范围过滤)
+
+        Note:
+            底层仍然调用 get_ranking_all() 获取所有数据,然后在内存中切片。
+            这是 Pixiv API 的限制 - API 使用 next_url 分页机制,不支持直接指定 offset。
+
+        Example:
+            >>> client.get_ranking_range(mode="day", limit=10)  # 前 10 个作品
+            >>> client.get_ranking_range(mode="day", offset=100)  # 从第 100 个开始
+            >>> client.get_ranking_range(mode="day", limit=50, offset=100)  # 第 100-149 个
+        """
+        # 获取所有数据
+        all_works = self.get_ranking_all(mode=mode, date=date)
+
+        # 应用范围过滤
+        start = offset
+        end = offset + limit if limit is not None else len(all_works)
+
+        logger.info(f"Returning works [{start}:{end}] of {len(all_works)} total")
+        return all_works[start:end]
+
     def _extract_works(self, illusts: list) -> list[dict]:
         """从 illusts 列表提取作品数据
 

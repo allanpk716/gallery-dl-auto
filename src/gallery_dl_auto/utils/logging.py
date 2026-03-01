@@ -100,7 +100,7 @@ def setup_logging(log_level: str = "INFO", verbose: bool = False, quiet: bool = 
             rich_tracebacks=True,  # 美化 traceback
             tracebacks_show_locals=True,  # 显示局部变量
         )
-        handler.setLevel(logging.INFO)  # 控制台仅输出 INFO+
+        handler.setLevel(logging.INFO)  # 控制台输出 INFO+
         logger.addHandler(handler)
 
     # 文件日志始终启用

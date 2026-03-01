@@ -100,6 +100,24 @@ def handle_interrupt(signum, frame):
     default=None,
     help="单张图片最大重试次数 (默认: 3)",
 )
+@click.option(
+    "--limit",
+    type=int,
+    default=None,
+    help="最多下载的作品数量 (默认: 全部)",
+)
+@click.option(
+    "--offset",
+    type=int,
+    default=0,
+    help="跳过前 N 个作品 (默认: 0)",
+)
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help="预览模式:只获取排行榜信息,不实际下载",
+)
 @click.pass_obj
 def download(
     config: DictConfig,
@@ -111,7 +129,10 @@ def download(
     image_delay: float | None,
     batch_delay: float | None,
     batch_size: int | None,
-    max_retries: int | None
+    max_retries: int | None,
+    limit: int | None,
+    offset: int,
+    dry_run: bool
 ) -> None:
     """Download Pixiv ranking images
 
@@ -125,6 +146,12 @@ def download(
 
     支持断点续传:如果下载被中断(Ctrl+C),进度会自动保存。
     下次运行相同命令时,将从断点位置继续下载,无需重新下载已完成的作品。
+
+    分批下载:使用 --limit 和 --offset 参数可以控制下载范围。
+    例如: --limit 100 --offset 0 下载前 100 个作品。
+
+    预览模式:使用 --dry-run 可以只获取排行榜信息而不实际下载。
+    例如: pixiv-downloader download --type daily --dry-run
     """
     # 注册中断信号处理器
     signal.signal(signal.SIGINT, handle_interrupt)
@@ -133,6 +160,12 @@ def download(
     if verbose:
         from gallery_dl_auto.utils.logging import setup_logging
         setup_logging(log_level="DEBUG", verbose=True)
+
+    # 参数验证
+    if limit is not None and limit <= 0:
+        raise click.BadParameter("--limit 必须是正整数")
+    if offset < 0:
+        raise click.BadParameter("--offset 必须大于等于 0")
 
     # type 参数已通过验证器转换为 API mode 参数
     mode = type
@@ -181,13 +214,60 @@ def download(
         print(error.model_dump_json(indent=2))
         sys.exit(1)
 
+    # 3.5. 预览模式:只获取排行榜信息,不实际下载
+    if dry_run:
+        try:
+            logger.info(f"预览模式: 获取排行榜信息 mode={mode}, date={date}")
+            ranking_data = client.get_ranking_range(
+                mode=mode, date=date, limit=limit, offset=offset
+            )
+
+            # 构建预览信息
+            preview_result = {
+                "dry_run": True,
+                "mode": mode,
+                "date": date,
+                "limit": limit,
+                "offset": offset,
+                "total_works": len(ranking_data),
+                "works": [
+                    {
+                        "rank": offset + idx + 1,
+                        "illust_id": work["id"],
+                        "title": work["title"],
+                        "author": work["author"]
+                    }
+                    for idx, work in enumerate(ranking_data)
+                ]
+            }
+
+            # 输出 JSON 格式的预览信息
+            print(json.dumps(preview_result, ensure_ascii=False, indent=2))
+            sys.exit(0)
+
+        except Exception as e:
+            error = StructuredError(
+                error_code=ErrorCode.API_SERVER_ERROR,
+                error_type="APIError",
+                message=f"获取排行榜信息失败: {e}",
+                suggestion="检查网络连接或稍后重试",
+                severity="error",
+                original_error=str(e),
+            )
+            print(error.model_dump_json(indent=2))
+            sys.exit(1)
+
     # 4. Initialize downloader with configuration
+    # 获取 output_mode (用于控制进度显示)
+    output_mode = config.get('output_mode', 'normal')
+
     output_dir = Path(output)
     downloader = RankingDownloader(
         client=client,
         output_dir=output_dir,
         config=download_config,
-        verbose=verbose  # 传递详细模式标志
+        verbose=verbose,
+        output_mode=output_mode  # 传递输出模式
     )
 
     # 5. Initialize download tracker for incremental downloads
@@ -198,7 +278,9 @@ def download(
         mode=mode,
         date=date,
         path_template=path_template,
-        tracker=tracker
+        tracker=tracker,
+        limit=limit,      # 范围控制:最多下载的作品数
+        offset=offset     # 范围控制:跳过前 N 个作品
     )
 
     # 7. Output JSON result
