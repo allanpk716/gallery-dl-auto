@@ -87,14 +87,16 @@ class TestModeManagerValidation:
             "day_r18", "day_male_r18", "day_female_r18", "week_r18", "week_r18g"
         ]
         for mode in valid_modes:
-            assert ModeManager.validate_api_mode(mode) is True
+            assert ModeManager.validate_api_mode(mode) == mode
 
     def test_validate_api_mode_invalid(self):
         """Test validation of invalid API modes raises error."""
-        with pytest.raises(ValueError, match="Invalid API mode"):
+        from gallery_dl_auto.core.mode_errors import InvalidModeError
+        with pytest.raises(InvalidModeError, match="Invalid mode"):
             ModeManager.validate_api_mode("invalid_mode")
 
     def test_api_to_gallery_dl_invalid_mode(self):
         """Test conversion of invalid mode raises error."""
-        with pytest.raises(ValueError, match="Invalid API mode"):
+        from gallery_dl_auto.core.mode_errors import InvalidModeError
+        with pytest.raises(InvalidModeError, match="Invalid mode"):
             ModeManager.api_to_gallery_dl("invalid_mode")
