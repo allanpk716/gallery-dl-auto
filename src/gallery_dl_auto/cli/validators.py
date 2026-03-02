@@ -8,27 +8,10 @@ from typing import Literal
 
 import click
 
-# 排行榜类型映射: 用户友好的名称 -> API mode 参数
-RANKING_MODES = {
-    # 常规
-    "daily": "day",
-    "weekly": "week",
-    "monthly": "month",
-    # 分类
-    "day_male": "day_male",
-    "day_female": "day_female",
-    "week_original": "week_original",
-    "week_rookie": "week_rookie",
-    "day_manga": "day_manga",
-    # R18
-    "day_r18": "day_r18",
-    "day_male_r18": "day_male_r18",
-    "day_female_r18": "day_female_r18",
-    "week_r18": "week_r18",
-    "week_r18g": "week_r18g",
-}
+from gallery_dl_auto.core.mode_manager import ModeManager
 
 # 类型别名: 排行榜类型
+# 保持向后兼容，支持 CLI 友好名称
 RankingType = Literal[
     "daily",
     "weekly",
@@ -50,7 +33,7 @@ def validate_ranking_type(type_str: str) -> str:
     """验证排行榜类型并返回 API mode 参数
 
     Args:
-        type_str: 用户输入的排行榜类型
+        type_str: 用户输入的排行榜类型（CLI 名称或 API 名称）
 
     Returns:
         API mode 参数 (day, week, month 等)
@@ -58,12 +41,14 @@ def validate_ranking_type(type_str: str) -> str:
     Raises:
         ValueError: 无效的排行榜类型
     """
-    if type_str not in RANKING_MODES:
-        valid_types = ", ".join(sorted(RANKING_MODES.keys()))
+    try:
+        return ModeManager.cli_to_api(type_str)
+    except Exception as e:
+        # 获取所有支持的 CLI modes 用于错误提示
+        valid_types = ", ".join(ModeManager.get_all_cli_modes())
         raise ValueError(
             f"Invalid ranking type '{type_str}'. Valid types: {valid_types}"
         )
-    return RANKING_MODES[type_str]
 
 
 def validate_ranking_date(date_str: str) -> str:

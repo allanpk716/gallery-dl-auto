@@ -13,7 +13,6 @@ from gallery_dl_auto.cli.validators import (
     validate_ranking_type,
     validate_date_param,
     validate_type_param,
-    RANKING_MODES,
 )
 
 
@@ -21,67 +20,126 @@ class TestRankingTypeValidation:
     """排行榜类型验证测试"""
 
     def test_valid_daily_type(self):
-        """测试有效类型: daily -> day"""
+        """测试有效类型: daily -> day (CLI 友好名称)"""
         result = validate_ranking_type("daily")
         assert result == "day"
 
     def test_valid_weekly_type(self):
-        """测试有效类型: weekly -> week"""
+        """测试有效类型: weekly -> week (CLI 友好名称)"""
         result = validate_ranking_type("weekly")
         assert result == "week"
 
     def test_valid_monthly_type(self):
-        """测试有效类型: monthly -> month"""
+        """测试有效类型: monthly -> month (CLI 友好名称)"""
         result = validate_ranking_type("monthly")
         assert result == "month"
 
+    def test_valid_male_type(self):
+        """测试有效类型: male -> day_male (CLI 友好名称)"""
+        result = validate_ranking_type("male")
+        assert result == "day_male"
+
+    def test_valid_female_type(self):
+        """测试有效类型: female -> day_female (CLI 友好名称)"""
+        result = validate_ranking_type("female")
+        assert result == "day_female"
+
+    def test_valid_original_type(self):
+        """测试有效类型: original -> week_original (CLI 友好名称)"""
+        result = validate_ranking_type("original")
+        assert result == "week_original"
+
+    def test_valid_rookie_type(self):
+        """测试有效类型: rookie -> week_rookie (CLI 友好名称)"""
+        result = validate_ranking_type("rookie")
+        assert result == "week_rookie"
+
+    def test_valid_daily_r18_type(self):
+        """测试有效类型: daily_r18 -> day_r18 (CLI 友好名称)"""
+        result = validate_ranking_type("daily_r18")
+        assert result == "day_r18"
+
+    def test_valid_male_r18_type(self):
+        """测试有效类型: male_r18 -> day_male_r18 (CLI 友好名称)"""
+        result = validate_ranking_type("male_r18")
+        assert result == "day_male_r18"
+
+    def test_valid_female_r18_type(self):
+        """测试有效类型: female_r18 -> day_female_r18 (CLI 友好名称)"""
+        result = validate_ranking_type("female_r18")
+        assert result == "day_female_r18"
+
+    def test_valid_weekly_r18_type(self):
+        """测试有效类型: weekly_r18 -> week_r18 (CLI 友好名称)"""
+        result = validate_ranking_type("weekly_r18")
+        assert result == "week_r18"
+
+    def test_valid_r18g_type(self):
+        """测试有效类型: r18g -> week_r18g (CLI 友好名称)"""
+        result = validate_ranking_type("r18g")
+        assert result == "week_r18g"
+
+
+class TestRankingTypeBackwardCompatibility:
+    """向后兼容性测试 - 支持 API 名称输入"""
+
+    def test_valid_day_type(self):
+        """测试 API 名称: day (向后兼容)"""
+        result = validate_ranking_type("day")
+        assert result == "day"
+
+    def test_valid_week_type(self):
+        """测试 API 名称: week (向后兼容)"""
+        result = validate_ranking_type("week")
+        assert result == "week"
+
+    def test_valid_month_type(self):
+        """测试 API 名称: month (向后兼容)"""
+        result = validate_ranking_type("month")
+        assert result == "month"
+
     def test_valid_day_male_type(self):
-        """测试有效类型: day_male (无需转换)"""
+        """测试 API 名称: day_male (向后兼容)"""
         result = validate_ranking_type("day_male")
         assert result == "day_male"
 
     def test_valid_day_female_type(self):
-        """测试有效类型: day_female"""
+        """测试 API 名称: day_female (向后兼容)"""
         result = validate_ranking_type("day_female")
         assert result == "day_female"
 
     def test_valid_week_original_type(self):
-        """测试有效类型: week_original"""
+        """测试 API 名称: week_original (向后兼容)"""
         result = validate_ranking_type("week_original")
         assert result == "week_original"
 
     def test_valid_week_rookie_type(self):
-        """测试有效类型: week_rookie"""
+        """测试 API 名称: week_rookie (向后兼容)"""
         result = validate_ranking_type("week_rookie")
         assert result == "week_rookie"
 
-    def test_valid_day_manga_type(self):
-        """测试有效类型: day_manga"""
-        result = validate_ranking_type("day_manga")
-        assert result == "day_manga"
-
     def test_valid_day_r18_type(self):
-        """测试有效类型: day_r18"""
+        """测试 API 名称: day_r18 (向后兼容)"""
         result = validate_ranking_type("day_r18")
         assert result == "day_r18"
 
     def test_valid_day_male_r18_type(self):
-        """测试有效类型: day_male_r18"""
+        """测试 API 名称: day_male_r18 (向后兼容)"""
         result = validate_ranking_type("day_male_r18")
         assert result == "day_male_r18"
 
     def test_valid_day_female_r18_type(self):
-        """测试有效类型: day_female_r18"""
+        """测试 API 名称: day_female_r18 (向后兼容)"""
         result = validate_ranking_type("day_female_r18")
         assert result == "day_female_r18"
 
     def test_valid_week_r18_type(self):
-        """测试有效类型: week_r18"""
+        """测试 API 名称: week_r18 (向后兼容)"""
         result = validate_ranking_type("week_r18")
         assert result == "week_r18"
 
     def test_valid_week_r18g_type(self):
-        """测试有效类型: week_r18g"""
+        """测试 API 名称: week_r18g (向后兼容)"""
         result = validate_ranking_type("week_r18g")
         assert result == "week_r18g"
 
@@ -99,15 +157,11 @@ class TestRankingTypeValidation:
             validate_ranking_type("xyz")
 
         error_msg = str(exc_info.value)
-        # 验证包含主要类型
+        # 验证包含主要类型（从 ModeManager.get_all_cli_modes() 获取）
         assert "daily" in error_msg
         assert "weekly" in error_msg
         assert "monthly" in error_msg
-        assert "day_male" in error_msg
-
-    def test_all_ranking_types_in_mapping(self):
-        """测试所有 13 种类型都在映射中"""
-        assert len(RANKING_MODES) == 13
+        assert "male" in error_msg
 
 
 class TestDateValidation:

@@ -163,3 +163,77 @@ class ModeManager:
             raise InvalidModeError(api_mode, valid_modes)
 
         return api_mode
+
+    @classmethod
+    def cli_to_api(cls, cli_mode: str) -> str:
+        """转换 CLI mode 为 API mode
+
+        将用户输入的 CLI mode 转换为 Pixiv API 使用的 mode。
+        支持两种输入：
+        1. CLI 友好名称（如 "daily", "weekly"）
+        2. API 名称（如 "day", "week"）- 向后兼容
+
+        Args:
+            cli_mode: CLI 输入的 mode（可以是友好名称或 API 名称）
+
+        Returns:
+            API mode 名称
+
+        Raises:
+            InvalidModeError: mode 无效
+
+        Example:
+            >>> # CLI 友好名称
+            >>> ModeManager.cli_to_api("daily")
+            'day'
+
+            >>> # API 名称（向后兼容）
+            >>> ModeManager.cli_to_api("day")
+            'day'
+        """
+        # CLI 友好名称到 API 名称的映射
+        cli_to_api_map = {
+            "daily": "day",
+            "weekly": "week",
+            "monthly": "month",
+            "male": "day_male",
+            "female": "day_female",
+            "original": "week_original",
+            "rookie": "week_rookie",
+            "daily_r18": "day_r18",
+            "male_r18": "day_male_r18",
+            "female_r18": "day_female_r18",
+            "weekly_r18": "week_r18",
+            "r18g": "week_r18g",
+        }
+
+        # 先尝试 CLI 友好名称
+        if cli_mode in cli_to_api_map:
+            return cli_to_api_map[cli_mode]
+
+        # 再尝试 API 名称（向后兼容）
+        if cli_mode in cls.MODES:
+            return cli_mode
+
+        # 都不匹配，报错
+        valid_modes = list(cli_to_api_map.keys()) + list(cls.MODES.keys())
+        raise InvalidModeError(cli_mode, valid_modes)
+
+    @classmethod
+    def get_all_cli_modes(cls) -> list[str]:
+        """获取所有支持的 CLI mode 名称
+
+        返回所有可用的 CLI 友好名称，用于帮助信息和错误提示。
+
+        Returns:
+            CLI mode 名称列表（排序后）
+
+        Example:
+            >>> ModeManager.get_all_cli_modes()
+            ['daily', 'weekly', 'monthly', 'male', 'female', ...]
+        """
+        return sorted([
+            "daily", "weekly", "monthly",
+            "male", "female", "original", "rookie",
+            "daily_r18", "male_r18", "female_r18", "weekly_r18", "r18g",
+        ])

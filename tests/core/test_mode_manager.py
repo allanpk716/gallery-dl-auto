@@ -100,3 +100,60 @@ class TestModeManagerValidation:
         from gallery_dl_auto.core.mode_errors import InvalidModeError
         with pytest.raises(InvalidModeError, match="Invalid mode"):
             ModeManager.api_to_gallery_dl("invalid_mode")
+
+
+class TestModeManagerCLIMethods:
+    """Test CLI-related methods."""
+
+    def test_cli_to_api_cli_names(self):
+        """Test CLI friendly names conversion."""
+        assert ModeManager.cli_to_api("daily") == "day"
+        assert ModeManager.cli_to_api("weekly") == "week"
+        assert ModeManager.cli_to_api("monthly") == "month"
+        assert ModeManager.cli_to_api("male") == "day_male"
+        assert ModeManager.cli_to_api("female") == "day_female"
+        assert ModeManager.cli_to_api("original") == "week_original"
+        assert ModeManager.cli_to_api("rookie") == "week_rookie"
+        assert ModeManager.cli_to_api("daily_r18") == "day_r18"
+        assert ModeManager.cli_to_api("male_r18") == "day_male_r18"
+        assert ModeManager.cli_to_api("female_r18") == "day_female_r18"
+        assert ModeManager.cli_to_api("weekly_r18") == "week_r18"
+        assert ModeManager.cli_to_api("r18g") == "week_r18g"
+
+    def test_cli_to_api_api_names_backward_compat(self):
+        """Test API names still work (backward compatibility)."""
+        assert ModeManager.cli_to_api("day") == "day"
+        assert ModeManager.cli_to_api("week") == "week"
+        assert ModeManager.cli_to_api("month") == "month"
+        assert ModeManager.cli_to_api("day_male") == "day_male"
+        assert ModeManager.cli_to_api("day_female") == "day_female"
+        assert ModeManager.cli_to_api("week_original") == "week_original"
+        assert ModeManager.cli_to_api("week_rookie") == "week_rookie"
+        assert ModeManager.cli_to_api("day_r18") == "day_r18"
+        assert ModeManager.cli_to_api("day_male_r18") == "day_male_r18"
+        assert ModeManager.cli_to_api("day_female_r18") == "day_female_r18"
+        assert ModeManager.cli_to_api("week_r18") == "week_r18"
+        assert ModeManager.cli_to_api("week_r18g") == "week_r18g"
+
+    def test_cli_to_api_invalid_mode(self):
+        """Test invalid CLI mode raises error."""
+        from gallery_dl_auto.core.mode_errors import InvalidModeError
+        with pytest.raises(InvalidModeError, match="Invalid mode"):
+            ModeManager.cli_to_api("invalid_mode")
+
+    def test_get_all_cli_modes(self):
+        """Test getting all CLI mode names."""
+        cli_modes = ModeManager.get_all_cli_modes()
+
+        # 验证返回的是列表
+        assert isinstance(cli_modes, list)
+
+        # 验证包含关键 mode
+        assert "daily" in cli_modes
+        assert "weekly" in cli_modes
+        assert "monthly" in cli_modes
+        assert "male" in cli_modes
+        assert "female" in cli_modes
+
+        # 验证列表已排序
+        assert cli_modes == sorted(cli_modes)
