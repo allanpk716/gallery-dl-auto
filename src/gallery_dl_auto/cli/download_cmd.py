@@ -49,7 +49,10 @@ def handle_interrupt(signum, frame):
     "--type",
     callback=validate_type_param,
     required=True,
-    help="Ranking type (daily, weekly, monthly, day_male, day_female, week_original, week_rookie, day_manga, day_r18, day_male_r18, day_female_r18, week_r18, week_r18g)",
+    help="Ranking type. Basic: daily/weekly/monthly (or day/week/month). "
+         "Categories: day_male, day_female, week_original, week_rookie, day_manga. "
+         "R18: day_r18, day_male_r18, day_female_r18, week_r18, week_r18g. "
+         "(Supports both CLI names and API names)",
 )
 @click.option(
     "--date",
@@ -118,6 +121,12 @@ def handle_interrupt(signum, frame):
     default=False,
     help="预览模式:只获取排行榜信息,不实际下载",
 )
+@click.option(
+    "--engine",
+    type=click.Choice(["gallery-dl", "internal"]),
+    default="gallery-dl",
+    help="下载引擎: gallery-dl (推荐,稳定) 或 internal (旧版,已废弃)",
+)
 @click.pass_obj
 def download(
     config: DictConfig,
@@ -132,12 +141,17 @@ def download(
     max_retries: int | None,
     limit: int | None,
     offset: int,
-    dry_run: bool
+    dry_run: bool,
+    engine: str
 ) -> None:
     """Download Pixiv ranking images
 
     Downloads images from the specified ranking to the output directory.
     Outputs JSON-formatted results for third-party integration.
+
+    下载引擎选择:
+    - gallery-dl (推荐): 使用 gallery-dl 作为下载引擎,稳定可靠,支持 200+ 平台
+    - internal (已废弃): 使用内部下载实现,仅用于向后兼容
 
     Download parameters (batch_size, image_delay, etc.) are loaded from
     configuration file: config/download.yaml
@@ -170,6 +184,12 @@ def download(
     # type 参数已通过验证器转换为 API mode 参数
     mode = type
 
+    # 引擎选择提示
+    if engine == "internal":
+        logger.warning(
+            "使用 internal 引擎 (已废弃)。建议切换到 gallery-dl 引擎: --engine gallery-dl"
+        )
+
     # 1. Load download configuration
     download_config_dict = config.get('download', {})
     download_config = DownloadConfig(**download_config_dict)
@@ -184,7 +204,7 @@ def download(
     if max_retries is not None:
         download_config.max_retries = max_retries
 
-    # 2. Load token
+    # 2. Load token (两个引擎都需要)
     storage = get_default_token_storage()
     token_data = storage.load_token()
 
@@ -199,6 +219,136 @@ def download(
         print(error.model_dump_json(indent=2))
         sys.exit(1)
 
+    # 3. 根据引擎选择下载方式
+    if engine == "gallery-dl":
+        # 使用 gallery-dl 引擎
+        return _download_with_gallery_dl(
+            config=config,
+            download_config=download_config,
+            token_data=token_data,
+            mode=mode,
+            date=date,
+            output=output,
+            path_template=path_template,
+            verbose=verbose,
+            limit=limit,
+            offset=offset,
+            dry_run=dry_run,
+        )
+    else:
+        # 使用 internal 引擎 (旧版)
+        return _download_with_internal(
+            config=config,
+            download_config=download_config,
+            token_data=token_data,
+            mode=mode,
+            date=date,
+            output=output,
+            path_template=path_template,
+            verbose=verbose,
+            limit=limit,
+            offset=offset,
+            dry_run=dry_run,
+        )
+
+
+def _download_with_gallery_dl(
+    config: DictConfig,
+    download_config: DownloadConfig,
+    token_data: dict,
+    mode: str,
+    date: str | None,
+    output: str,
+    path_template: str | None,
+    verbose: bool,
+    limit: int | None,
+    offset: int,
+    dry_run: bool,
+) -> None:
+    """使用 gallery-dl 引擎下载
+
+    Args:
+        config: 全局配置
+        download_config: 下载配置
+        token_data: token 数据
+        mode: 排行榜类型
+        date: 日期
+        output: 输出目录
+        path_template: 路径模板
+        verbose: 详细模式
+        limit: 最多下载的作品数量
+        offset: 跳过前 N 个作品
+        dry_run: 预览模式
+    """
+    from gallery_dl_auto.integration.gallery_dl_wrapper import GalleryDLWrapper
+
+    try:
+        # 初始化 gallery-dl wrapper
+        wrapper = GalleryDLWrapper(config=download_config)
+    except RuntimeError as e:
+        error = StructuredError(
+            error_code=ErrorCode.DOWNLOAD_UNKNOWN_ERROR,
+            error_type="DownloadError",
+            message=str(e),
+            suggestion="安装 gallery-dl: pip install gallery-dl>=1.28.0",
+            severity="error",
+        )
+        print(error.model_dump_json(indent=2))
+        sys.exit(1)
+
+    # 执行下载
+    output_dir = Path(output)
+    result = wrapper.download_ranking(
+        mode=mode,
+        date=date,
+        output_dir=output_dir,
+        path_template=path_template,
+        limit=limit,
+        offset=offset,
+        dry_run=dry_run,
+        verbose=verbose,
+    )
+
+    # 输出 JSON 结果
+    print(result.model_dump_json(indent=2, ensure_ascii=False))
+
+    # 返回退出码
+    if result.success:
+        sys.exit(0)  # 完全成功
+    elif result.downloaded > 0:
+        sys.exit(1)  # 部分成功
+    else:
+        sys.exit(2)  # 完全失败
+
+
+def _download_with_internal(
+    config: DictConfig,
+    download_config: DownloadConfig,
+    token_data: dict,
+    mode: str,
+    date: str | None,
+    output: str,
+    path_template: str | None,
+    verbose: bool,
+    limit: int | None,
+    offset: int,
+    dry_run: bool,
+) -> None:
+    """使用 internal 引擎下载 (旧版,已废弃)
+
+    Args:
+        config: 全局配置
+        download_config: 下载配置
+        token_data: token 数据
+        mode: 排行榜类型
+        date: 日期
+        output: 输出目录
+        path_template: 路径模板
+        verbose: 详细模式
+        limit: 最多下载的作品数量
+        offset: 跳过前 N 个作品
+        dry_run: 预览模式
+    """
     # 3. Initialize API client
     try:
         client = PixivClient(refresh_token=token_data["refresh_token"])
