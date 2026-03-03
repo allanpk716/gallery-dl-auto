@@ -54,4 +54,5 @@ class BatchDownloadResult(BaseModel):
     failed_errors: list[StructuredError] = Field(
         default_factory=list, description="失败错误列表"
     )
-    output_dir: str = Field(..., description="输出目录")
+    output_dir: str = Field(..., description="输出目录(相对路径)")
+    actual_download_dir: Optional[str] = Field(None, description="实际下载目录(绝对路径,包含mode和date)")

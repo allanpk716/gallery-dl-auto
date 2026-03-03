@@ -100,6 +100,7 @@ class GalleryDLWrapper:
                 failed=0,
                 skipped=0,
                 output_dir=str(output_dir),
+                actual_download_dir=None,
                 success_list=[],
                 failed_errors=[
                     StructuredError(
@@ -112,8 +113,24 @@ class GalleryDLWrapper:
                 ],
             )
 
-        # 2. 构建排行榜 URL
+        # 2. 构建排行榜 URL 并计算实际下载路径
         url = self._build_ranking_url(mode, date)
+
+        # 计算实际下载路径（gallery-dl 的默认路径格式）
+        # 格式: {output_dir}/pixiv/rankings/{mode}/{date}/
+        # 注意：gallery-dl 使用原始的 API mode，而不是转换后的 gallery-dl mode
+
+        # 如果未指定日期，使用前天的日期（与 _build_ranking_url 逻辑一致）
+        actual_date = date
+        if not actual_date:
+            day_before = datetime.now() - timedelta(days=2)
+            actual_date = day_before.strftime("%Y-%m-%d")
+
+        # 构建实际下载路径（使用原始 mode）
+        actual_download_path = output_dir.joinpath("pixiv", "rankings", mode, actual_date)
+
+        # 转换为绝对路径
+        actual_download_path = actual_download_path.resolve()
 
         # 3. 执行命令
         temp_config_file = None
@@ -146,7 +163,7 @@ class GalleryDLWrapper:
                 logger.debug(f"gallery-dl stderr: {result.stderr[:500]}")
 
             # 5. 解析结果
-            return self._parse_result(result, dry_run, output_dir, limit, offset)
+            return self._parse_result(result, dry_run, output_dir, limit, offset, actual_download_path)
 
         except subprocess.TimeoutExpired:
             return BatchDownloadResult(
@@ -156,6 +173,7 @@ class GalleryDLWrapper:
                 failed=0,
                 skipped=0,
                 output_dir=str(output_dir),
+                actual_download_dir=str(actual_download_path),
                 success_list=[],
                 failed_errors=[
                     StructuredError(
@@ -176,6 +194,7 @@ class GalleryDLWrapper:
                 failed=0,
                 skipped=0,
                 output_dir=str(output_dir),
+                actual_download_dir=str(actual_download_path),
                 success_list=[],
                 failed_errors=[
                     StructuredError(
@@ -346,7 +365,7 @@ class GalleryDLWrapper:
         return Path(temp_file.name)
 
     def _parse_result(
-        self, result: subprocess.CompletedProcess, dry_run: bool, output_dir: Path, limit: Optional[int] = None, offset: int = 0
+        self, result: subprocess.CompletedProcess, dry_run: bool, output_dir: Path, limit: Optional[int] = None, offset: int = 0, actual_download_path: Optional[Path] = None
     ) -> BatchDownloadResult:
         """解析 gallery-dl 执行结果
 
@@ -356,6 +375,7 @@ class GalleryDLWrapper:
             output_dir: 输出目录
             limit: 最多返回的作品数量
             offset: 跳过前 N 个作品
+            actual_download_path: 实际下载路径
 
         Returns:
             BatchDownloadResult: 下载结果
@@ -375,6 +395,7 @@ class GalleryDLWrapper:
                 failed=0,
                 skipped=0,
                 output_dir=str(output_dir),
+                actual_download_dir=str(actual_download_path) if actual_download_path else None,
                 success_list=[],
                 failed_errors=[
                     StructuredError(
@@ -403,19 +424,20 @@ class GalleryDLWrapper:
                 failed=0,
                 skipped=0,
                 output_dir=str(output_dir),
+                actual_download_dir=str(actual_download_path) if actual_download_path else None,
                 success_list=[],
                 failed_errors=[],
             )
 
         if dry_run:
             # 预览模式：解析 JSON 输出
-            return self._parse_dry_run_output(result.stdout, output_dir, limit, offset)
+            return self._parse_dry_run_output(result.stdout, output_dir, limit, offset, actual_download_path)
         else:
             # 正常下载模式：解析 ID 列表
-            return self._parse_download_output(result.stdout, output_dir)
+            return self._parse_download_output(result.stdout, output_dir, actual_download_path)
 
     def _parse_dry_run_output(
-        self, stdout: str, output_dir: Path, limit: Optional[int] = None, offset: int = 0
+        self, stdout: str, output_dir: Path, limit: Optional[int] = None, offset: int = 0, actual_download_path: Optional[Path] = None
     ) -> BatchDownloadResult:
         """解析预览模式输出（JSON）
 
@@ -424,6 +446,7 @@ class GalleryDLWrapper:
             output_dir: 输出目录
             limit: 最多返回的作品数量
             offset: 跳过前 N 个作品
+            actual_download_path: 实际下载路径
 
         Returns:
             BatchDownloadResult: 下载结果
@@ -513,6 +536,7 @@ class GalleryDLWrapper:
                 failed=failed,
                 skipped=0,
                 output_dir=str(output_dir),
+                actual_download_dir=str(actual_download_path) if actual_download_path else None,
                 success_list=success_list,
                 failed_errors=failed_errors,
             )
@@ -527,6 +551,7 @@ class GalleryDLWrapper:
                 failed=0,
                 skipped=0,
                 output_dir=str(output_dir),
+                actual_download_dir=str(actual_download_path) if actual_download_path else None,
                 success_list=[],
                 failed_errors=[
                     StructuredError(
@@ -541,13 +566,14 @@ class GalleryDLWrapper:
             )
 
     def _parse_download_output(
-        self, stdout: str, output_dir: Path
+        self, stdout: str, output_dir: Path, actual_download_path: Optional[Path] = None
     ) -> BatchDownloadResult:
         """解析正常下载输出（文件路径）
 
         Args:
             stdout: gallery-dl 标准输出（每行一个文件路径）
             output_dir: 输出目录
+            actual_download_path: 实际下载路径
 
         Returns:
             BatchDownloadResult: 下载结果
@@ -585,6 +611,7 @@ class GalleryDLWrapper:
             failed=0,
             skipped=0,
             output_dir=str(output_dir),
+            actual_download_dir=str(actual_download_path) if actual_download_path else None,
             success_list=success_list,
             failed_errors=[],
         )
