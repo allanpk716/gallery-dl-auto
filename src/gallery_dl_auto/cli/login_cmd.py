@@ -19,10 +19,25 @@ logger = logging.getLogger("gallery_dl_auto")
 def login(force: bool) -> None:
     """Login to Pixiv and save refresh token
 
+    [IMPORTANT] This command MUST be executed by a human user.
+
+    AI/LLM Agents CANNOT automatically complete the login process because:
+    - Requires browser interaction and user verification
+    - Needs human to enter credentials in the browser
+    - Cannot be automated via CLI or API
+
+    \b
     This command will:
     1. Open browser for Pixiv login
-    2. Automatically capture refresh token
-    3. Encrypt and save token to ~/.gallery-dl-auto/credentials.enc
+    2. Wait for human to complete login
+    3. Automatically capture refresh token
+    4. Encrypt and save token to ~/.gallery-dl-auto/credentials.enc
+
+    \b
+    When to use:
+    - First-time setup (required before any download)
+    - When token expired or invalid (check with 'pixiv-downloader status')
+    - Use --force flag to force refresh
     """
     console = Console()
     storage = get_default_token_storage()

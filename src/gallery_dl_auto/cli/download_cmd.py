@@ -158,6 +158,19 @@ def download(
     Downloads images from the specified ranking to the output directory.
     Outputs JSON-formatted results for third-party integration.
 
+    \b
+    [PREREQUISITE] Requires valid authentication token
+    First-time users must run 'pixiv-downloader login' to authenticate.
+    If token expires, re-run 'pixiv-downloader login' to refresh.
+
+    \b
+    AI Agents should check token status first:
+      pixiv-downloader --json-output status
+
+    \b
+    If status shows token_valid: false, prompt human to run:
+      pixiv-downloader login
+
     下载引擎选择:
     - gallery-dl (推荐): 使用 gallery-dl 作为下载引擎,稳定可靠,支持 200+ 平台
     - internal (已废弃): 使用内部下载实现,仅用于向后兼容

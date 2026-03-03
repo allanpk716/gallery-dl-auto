@@ -53,11 +53,19 @@ def cli(ctx: click.Context, verbose: bool, quiet: bool, json_output: bool) -> No
     无需手动从浏览器开发者工具中复制,实现真正的自动化下载流程。
 
     \b
+    [首次使用必读]
+    - 必须先运行 'pixiv-downloader login' 完成登录
+    - AI Agent 调用前请确认人类已完成登录操作
+    - Token 失效时需要人类重新运行 'pixiv-downloader login'
+
+    \b
     常用命令:
-      pixiv-downloader version        显示版本信息
-      pixiv-downloader config         查看当前配置
-      pixiv-downloader doctor         诊断环境和配置
-      pixiv-downloader download       下载排行榜内容
+      pixiv-downloader login           登录并保存 token (首次使用必须)
+      pixiv-downloader status          查看 token 状态
+      pixiv-downloader version         显示版本信息
+      pixiv-downloader config          查看当前配置
+      pixiv-downloader doctor          诊断环境和配置
+      pixiv-downloader download        下载排行榜内容
     """
     ctx.ensure_object(dict)
 

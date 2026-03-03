@@ -138,9 +138,54 @@ pixiv-downloader --json-help
 
 ---
 
+## ⚠️ 重要提示：Token 管理
+
+### 首次使用必读
+
+**🔐 登录操作必须由人类完成**
+
+由于 Pixiv 登录需要浏览器交互和用户验证，**AI/LLM Agent 无法自动完成登录过程**。在以下情况下，需要人类手动执行 `login` 命令：
+
+- **首次使用**：项目安装后需要人类执行 `pixiv-downloader login` 进行初始登录
+- **Token 失效**：当 token 过期或失效时，需要人类重新登录
+- **强制重新登录**：使用 `pixiv-downloader login --force` 强制更新 token
+
+### Token 管理流程
+
+```mermaid
+graph LR
+    A[首次使用] -->|人类操作| B[login 命令]
+    B --> C[Token 保存]
+    C --> D[自动刷新]
+    D --> E{Token 有效?}
+    E -->|是| F[AI 可调用 download]
+    E -->|否| G[Token 失效]
+    G -->|人类操作| B
+```
+
+### AI Agent 使用前提
+
+**在调用 download 命令之前，AI Agent 应该：**
+
+1. ✅ 确认人类已完成首次登录
+2. ✅ 使用 `pixiv-downloader status` 检查 token 状态
+3. ✅ 如果 token 无效，提示人类执行 `pixiv-downloader login`
+4. ✅ Token 有效后，AI 才能调用 download 等命令
+
+**错误处理：**
+
+当 download 命令返回 `AUTH_TOKEN_ERROR` 或 `AUTH_TOKEN_EXPIRED` 错误时，AI Agent 应该：
+- 停止当前操作
+- 明确提示人类：**"Token 失效，请运行 `pixiv-downloader login` 重新登录"**
+- 等待人类完成登录后再继续
+
+---
+
 ## 快速开始
 
 ### AI 用户快速开始
+
+**前提条件：人类已完成登录操作** ⚠️
 
 1. **安装**
    ```bash
@@ -149,14 +194,20 @@ pixiv-downloader --json-help
    pip install -e .
    ```
 
-2. **获取结构化帮助**
+2. **检查 Token 状态** (AI 应首先执行)
+   ```bash
+   pixiv-downloader --json-output status
+   ```
+
+   如果返回 `"token_valid": false`，提示人类：**"需要登录，请运行 pixiv-downloader login"**
+
+3. **获取结构化帮助**
    ```bash
    pixiv-downloader --json-help
    ```
 
-3. **下载排行榜** (首次需要手动登录)
+4. **下载排行榜** (仅在 token 有效时)
    ```bash
-   pixiv-downloader login
    pixiv-downloader download --type daily --format jsonl
    ```
 
@@ -174,7 +225,7 @@ pixiv-downloader --json-help
    pixiv-downloader --help
    ```
 
-3. **登录并保存 token**
+3. **登录并保存 token** ⚠️ **必须步骤**
    ```bash
    pixiv-downloader login
    ```
