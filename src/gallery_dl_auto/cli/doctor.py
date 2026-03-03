@@ -17,7 +17,8 @@ def doctor(ctx: click.Context) -> None:
 
     检查 Python 版本、依赖项和配置文件。
     """
-    console: Console = ctx.obj["console"]
+    # 从 ctx.obj 获取 console 或创建新的
+    console = ctx.obj.get("console", Console()) if ctx.obj else Console()
 
     console.print("[bold blue]运行诊断检查...[/bold blue]\n")
 
