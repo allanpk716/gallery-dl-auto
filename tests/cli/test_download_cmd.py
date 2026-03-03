@@ -846,3 +846,12 @@ def test_incremental_download_with_tracker(tmp_path: Path) -> None:
         assert mock_get.call_count == 3
 
 
+def test_format_parameter_exists() -> None:
+    """测试 --format 参数存在且接受正确的值"""
+    runner = CliRunner()
+    result = runner.invoke(download, ['--help'])
+    assert result.exit_code == 0
+    assert '--format' in result.output
+    assert 'json' in result.output
+    assert 'jsonl' in result.output
+

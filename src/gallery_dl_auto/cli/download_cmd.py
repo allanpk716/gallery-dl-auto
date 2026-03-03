@@ -127,6 +127,12 @@ def handle_interrupt(signum, frame):
     default="gallery-dl",
     help="下载引擎: gallery-dl (推荐,稳定) 或 internal (旧版,已废弃)",
 )
+@click.option(
+    "--format",
+    type=click.Choice(["json", "jsonl"]),
+    default="json",
+    help="Output format: json (human-readable with indentation) or jsonl (compact single-line, for LLM agents)",
+)
 @click.pass_obj
 def download(
     config: DictConfig,
@@ -142,7 +148,8 @@ def download(
     limit: int | None,
     offset: int,
     dry_run: bool,
-    engine: str
+    engine: str,
+    format: str
 ) -> None:
     """Download Pixiv ranking images
 
