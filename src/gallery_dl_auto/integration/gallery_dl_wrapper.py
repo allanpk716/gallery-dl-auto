@@ -8,6 +8,7 @@ import logging
 import subprocess
 import sys
 import tempfile
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
 
@@ -217,12 +218,22 @@ class GalleryDLWrapper:
             logger.error(f"无效的排行榜 mode: {mode}")
             raise
 
+        # 如果用户未指定日期，使用前天的日期
+        # 原因：Pixiv 排行榜通常需要 1 天时间更新，昨天的排行榜可能还没有数据
+        if not date:
+            day_before = datetime.now() - timedelta(days=2)
+            date = day_before.strftime("%Y-%m-%d")
+            logger.info(f"未指定日期，使用前天的日期: {date}")
+
         # gallery-dl 支持的排行榜 URL 格式
-        # https://www.pixiv.net/ranking.php?mode=daily&content=illust&date=2024-03-01
+        # https://www.pixiv.net/ranking.php?mode=daily&content=illust&date=20240101
+        # 注意：gallery-dl 需要 YYYYMMDD 格式，而不是 YYYY-MM-DD
         base_url = f"https://www.pixiv.net/ranking.php?mode={gallery_dl_mode}&content=illust"
 
-        if date:
-            base_url += f"&date={date}"
+        # 将 YYYY-MM-DD 转换为 YYYYMMDD（移除连字符）
+        formatted_date = date.replace("-", "")
+        base_url += f"&date={formatted_date}"
+        logger.debug(f"日期格式转换: {date} -> {formatted_date}")
 
         logger.debug(f"构建排行榜 URL: {base_url}")
         return base_url
