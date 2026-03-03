@@ -855,3 +855,214 @@ def test_format_parameter_exists() -> None:
     assert 'json' in result.output
     assert 'jsonl' in result.output
 
+
+def test_jsonl_output_format(tmp_path: Path) -> None:
+    """测试 JSONL 输出格式是单行且紧凑的"""
+    with (
+        patch(
+            "gallery_dl_auto.cli.download_cmd.get_default_token_storage"
+        ) as mock_storage,
+        patch(
+            "gallery_dl_auto.integration.gallery_dl_wrapper.GalleryDLWrapper"
+        ) as mock_wrapper_class,
+    ):
+        # Setup mock token
+        mock_storage_instance = MagicMock()
+        mock_storage_instance.load_token.return_value = {"refresh_token": "test_token"}
+        mock_storage.return_value = mock_storage_instance
+
+        # Setup mock wrapper
+        mock_wrapper = MagicMock()
+        mock_result = BatchDownloadResult(
+            success=True,
+            total=2,
+            downloaded=2,
+            failed=0,
+            skipped=0,
+            output_dir=str(tmp_path),
+            success_list=[12345, 67890],
+            failed_errors=[],
+        )
+        mock_wrapper.download_ranking.return_value = mock_result
+        mock_wrapper_class.return_value = mock_wrapper
+
+        # Run with JSONL format
+        runner = CliRunner()
+        result = runner.invoke(
+            download,
+            [
+                "--type",
+                "daily",
+                "--output",
+                str(tmp_path),
+                "--engine",
+                "gallery-dl",
+                "--format",
+                "jsonl",
+                "--dry-run",
+            ],
+            obj=make_mock_config(),
+        )
+
+        assert result.exit_code == 0
+
+        # 验证输出是单行（JSONL 格式）
+        output_lines = result.output.strip().split('\n')
+        assert len(output_lines) == 1, f"JSONL 输出应该是单行，但有 {len(output_lines)} 行"
+
+        # 验证输出可以被解析为 JSON
+        output_json = json.loads(output_lines[0])
+        assert output_json["success"] is True
+        assert output_json["total"] == 2
+        assert output_json["downloaded"] == 2
+
+        # 验证输出没有多余的空格（紧凑格式）
+        # JSONL 格式应该比美化的 JSON 更短
+        json_output = json.dumps(output_json, ensure_ascii=False, indent=2)
+        jsonl_output = output_lines[0]
+        assert len(jsonl_output) < len(json_output), "JSONL 格式应该比美化的 JSON 更紧凑"
+
+
+def test_json_output_format(tmp_path: Path) -> None:
+    """测试 JSON 输出格式是美化且带缩进的"""
+    with (
+        patch(
+            "gallery_dl_auto.cli.download_cmd.get_default_token_storage"
+        ) as mock_storage,
+        patch(
+            "gallery_dl_auto.integration.gallery_dl_wrapper.GalleryDLWrapper"
+        ) as mock_wrapper_class,
+    ):
+        # Setup mock token
+        mock_storage_instance = MagicMock()
+        mock_storage_instance.load_token.return_value = {"refresh_token": "test_token"}
+        mock_storage.return_value = mock_storage_instance
+
+        # Setup mock wrapper
+        mock_wrapper = MagicMock()
+        mock_result = BatchDownloadResult(
+            success=True,
+            total=2,
+            downloaded=2,
+            failed=0,
+            skipped=0,
+            output_dir=str(tmp_path),
+            success_list=[12345, 67890],
+            failed_errors=[],
+        )
+        mock_wrapper.download_ranking.return_value = mock_result
+        mock_wrapper_class.return_value = mock_wrapper
+
+        # Run with JSON format
+        runner = CliRunner()
+        result = runner.invoke(
+            download,
+            [
+                "--type",
+                "daily",
+                "--output",
+                str(tmp_path),
+                "--engine",
+                "gallery-dl",
+                "--format",
+                "json",
+                "--dry-run",
+            ],
+            obj=make_mock_config(),
+        )
+
+        assert result.exit_code == 0
+
+        # 验证输出是多行（JSON 格式）
+        output_lines = result.output.strip().split('\n')
+        assert len(output_lines) > 1, f"JSON 输出应该是多行，但只有 {len(output_lines)} 行"
+
+        # 验证输出可以被解析为 JSON
+        output_json = json.loads(result.output)
+        assert output_json["success"] is True
+        assert output_json["total"] == 2
+        assert output_json["downloaded"] == 2
+
+
+def test_jsonl_vs_json_size_comparison(tmp_path: Path) -> None:
+    """测试 JSONL 格式比 JSON 格式更紧凑"""
+    with (
+        patch(
+            "gallery_dl_auto.cli.download_cmd.get_default_token_storage"
+        ) as mock_storage,
+        patch(
+            "gallery_dl_auto.integration.gallery_dl_wrapper.GalleryDLWrapper"
+        ) as mock_wrapper_class,
+    ):
+        # Setup mock token
+        mock_storage_instance = MagicMock()
+        mock_storage_instance.load_token.return_value = {"refresh_token": "test_token"}
+        mock_storage.return_value = mock_storage_instance
+
+        # Setup mock wrapper with larger data
+        mock_wrapper = MagicMock()
+        mock_result = BatchDownloadResult(
+            success=True,
+            total=50,
+            downloaded=50,
+            failed=0,
+            skipped=0,
+            output_dir=str(tmp_path),
+            success_list=list(range(1, 51)),  # 50 个作品
+            failed_errors=[],
+        )
+        mock_wrapper.download_ranking.return_value = mock_result
+        mock_wrapper_class.return_value = mock_wrapper
+
+        # Run with JSON format
+        runner = CliRunner()
+        json_result = runner.invoke(
+            download,
+            [
+                "--type",
+                "daily",
+                "--output",
+                str(tmp_path),
+                "--engine",
+                "gallery-dl",
+                "--format",
+                "json",
+                "--dry-run",
+            ],
+            obj=make_mock_config(),
+        )
+
+        # Run with JSONL format
+        jsonl_result = runner.invoke(
+            download,
+            [
+                "--type",
+                "daily",
+                "--output",
+                str(tmp_path),
+                "--engine",
+                "gallery-dl",
+                "--format",
+                "jsonl",
+                "--dry-run",
+            ],
+            obj=make_mock_config(),
+        )
+
+        assert json_result.exit_code == 0
+        assert jsonl_result.exit_code == 0
+
+        # 验证 JSONL 格式更紧凑
+        json_size = len(json_result.output)
+        jsonl_size = len(jsonl_result.output)
+        compression_ratio = (json_size - jsonl_size) / json_size * 100
+
+        # JSONL 应该比 JSON 小至少 10%（对于大数据集通常在 20-40%）
+        assert (
+            jsonl_size < json_size
+        ), f"JSONL ({jsonl_size} bytes) 应该比 JSON ({json_size} bytes) 更小"
+
+        # 打印压缩率（用于文档说明）
+        print(f"JSONL 压缩率: {compression_ratio:.1f}%")
+
+

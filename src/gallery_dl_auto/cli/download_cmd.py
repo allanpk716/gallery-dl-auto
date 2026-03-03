@@ -34,6 +34,8 @@ def handle_interrupt(signum, frame):
     logger.warning("用户中断下载,进度已保存,下次运行将从断点继续")
 
     # 输出 JSON 格式的中断信息
+    # 注意：中断信息保持 JSON 格式（带缩进），便于用户阅读
+    # 如果需要 JSONL 格式，可以通过环境变量或全局配置控制
     print(json.dumps({
         "success": False,
         "error": "USER_INTERRUPT",
@@ -223,7 +225,7 @@ def download(
             suggestion="Run 'pixiv-downloader login' first",
             severity="error",
         )
-        print(error.model_dump_json(indent=2))
+        print(error.model_dump_json(indent=2, ensure_ascii=False))
         sys.exit(1)
 
     # 3. 根据引擎选择下载方式
@@ -241,6 +243,7 @@ def download(
             limit=limit,
             offset=offset,
             dry_run=dry_run,
+            format=format,
         )
     else:
         # 使用 internal 引擎 (旧版)
@@ -256,6 +259,7 @@ def download(
             limit=limit,
             offset=offset,
             dry_run=dry_run,
+            format=format,
         )
 
 
@@ -271,6 +275,7 @@ def _download_with_gallery_dl(
     limit: int | None,
     offset: int,
     dry_run: bool,
+    format: str,
 ) -> None:
     """使用 gallery-dl 引擎下载
 
@@ -286,6 +291,7 @@ def _download_with_gallery_dl(
         limit: 最多下载的作品数量
         offset: 跳过前 N 个作品
         dry_run: 预览模式
+        format: 输出格式 (json/jsonl)
     """
     from gallery_dl_auto.integration.gallery_dl_wrapper import GalleryDLWrapper
 
@@ -300,7 +306,7 @@ def _download_with_gallery_dl(
             suggestion="安装 gallery-dl: pip install gallery-dl>=1.28.0",
             severity="error",
         )
-        print(error.model_dump_json(indent=2))
+        print(error.model_dump_json(indent=2, ensure_ascii=False))
         sys.exit(1)
 
     # 执行下载
@@ -317,7 +323,11 @@ def _download_with_gallery_dl(
     )
 
     # 输出 JSON 结果
-    print(result.model_dump_json(indent=2, ensure_ascii=False))
+    if format == "json":
+        print(result.model_dump_json(indent=2, ensure_ascii=False))
+    else:  # jsonl
+        # 使用 json.dumps() 来实现紧凑的单行输出
+        print(json.dumps(result.model_dump(mode="json"), ensure_ascii=False, separators=(',', ':')))
 
     # 返回退出码
     if result.success:
@@ -340,6 +350,7 @@ def _download_with_internal(
     limit: int | None,
     offset: int,
     dry_run: bool,
+    format: str,
 ) -> None:
     """使用 internal 引擎下载 (旧版,已废弃)
 
@@ -355,6 +366,7 @@ def _download_with_internal(
         limit: 最多下载的作品数量
         offset: 跳过前 N 个作品
         dry_run: 预览模式
+        format: 输出格式 (json/jsonl)
     """
     # 3. Initialize API client
     try:
@@ -368,7 +380,7 @@ def _download_with_internal(
             severity="error",
             original_error=str(e),
         )
-        print(error.model_dump_json(indent=2))
+        print(error.model_dump_json(indent=2, ensure_ascii=False))
         sys.exit(1)
 
     # 3.5. 预览模式:只获取排行榜信息,不实际下载
@@ -399,7 +411,10 @@ def _download_with_internal(
             }
 
             # 输出 JSON 格式的预览信息
-            print(json.dumps(preview_result, ensure_ascii=False, indent=2))
+            if format == "json":
+                print(json.dumps(preview_result, ensure_ascii=False, indent=2))
+            else:  # jsonl
+                print(json.dumps(preview_result, ensure_ascii=False, separators=(',', ':')))
             sys.exit(0)
 
         except Exception as e:
@@ -411,7 +426,7 @@ def _download_with_internal(
                 severity="error",
                 original_error=str(e),
             )
-            print(error.model_dump_json(indent=2))
+            print(error.model_dump_json(indent=2, ensure_ascii=False))
             sys.exit(1)
 
     # 4. Initialize downloader with configuration
@@ -441,7 +456,11 @@ def _download_with_internal(
     )
 
     # 7. Output JSON result
-    print(result.model_dump_json(indent=2, ensure_ascii=False))
+    if format == "json":
+        print(result.model_dump_json(indent=2, ensure_ascii=False))
+    else:  # jsonl
+        # 使用 json.dumps() 来实现紧凑的单行输出
+        print(json.dumps(result.model_dump(mode="json"), ensure_ascii=False, separators=(',', ':')))
 
     # 8. Return exit code based on download status
     if result.success:
