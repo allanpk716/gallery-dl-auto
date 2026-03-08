@@ -5,6 +5,7 @@
 
 import json
 import logging
+import sqlite3
 import subprocess
 import sys
 import tempfile
@@ -661,3 +662,55 @@ class GalleryDLWrapper:
         )
 
         return pending_ids, skipped_ids
+
+    def _generate_archive_file(
+        self,
+        tracker: 'DownloadTracker',
+        temp_dir: Path
+    ) -> Optional[Path]:
+        """生成 gallery-dl archive 文件
+
+        Args:
+            tracker: 下载历史追踪器
+            temp_dir: 临时文件目录
+
+        Returns:
+            Optional[Path]: archive 文件路径，失败返回 None
+        """
+        try:
+            import time
+            from gallery_dl_auto.download.download_tracker import DownloadTracker
+
+            # 创建临时目录
+            temp_dir.mkdir(parents=True, exist_ok=True)
+
+            # 生成唯一的文件名
+            timestamp = int(time.time())
+            archive_file = temp_dir / f"archive_{timestamp}.txt"
+
+            # 从 tracker 数据库读取所有已下载的 illust_id
+            # 注意：需要在 DownloadTracker 中添加新方法 get_all_downloaded_ids()
+            # 这里先使用占位符实现
+            with sqlite3.connect(tracker.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT illust_id FROM downloads")
+                all_ids = [row[0] for row in cursor.fetchall()]
+
+            if not all_ids:
+                logger.info("No existing downloads in tracker, skipping archive generation")
+                return None
+
+            # 写入 archive 文件（gallery-dl 格式：每行一个 ID）
+            with open(archive_file, 'w', encoding='utf-8') as f:
+                for illust_id in all_ids:
+                    f.write(f"{illust_id}\n")
+
+            logger.info(
+                f"Generated archive file: {archive_file} "
+                f"({len(all_ids)} downloaded works)"
+            )
+            return archive_file
+
+        except Exception as e:
+            logger.warning(f"Failed to generate archive file: {e}, deduplication disabled")
+            return None
