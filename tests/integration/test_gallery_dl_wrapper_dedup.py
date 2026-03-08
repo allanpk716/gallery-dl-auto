@@ -131,3 +131,57 @@ def test_check_existing_downloads_all_skipped(tmp_path):
     assert len(pending_ids) == 0
     assert len(skipped_ids) == 3
     assert set(skipped_ids) == {11111, 22222, 33333}
+
+
+def test_generate_archive_file(tmp_path):
+    """测试 archive 文件生成"""
+    # 准备
+    config = DownloadConfig()
+    wrapper = GalleryDLWrapper(config)
+
+    db_path = tmp_path / "test.db"
+    tracker = DownloadTracker(db_path)
+
+    # 记录一些下载
+    for illust_id in [11111, 22222, 33333]:
+        tracker.record_download(
+            illust_id=illust_id,
+            file_path=tmp_path / f"{illust_id}_p0.jpg",
+            mode="day",
+            date="2026-03-07"
+        )
+
+    temp_dir = tmp_path / "temp"
+
+    # 执行
+    archive_file = wrapper._generate_archive_file(tracker, temp_dir)
+
+    # 验证
+    assert archive_file is not None
+    assert archive_file.exists()
+
+    # 读取并验证内容
+    with open(archive_file, 'r', encoding='utf-8') as f:
+        lines = [line.strip() for line in f.readlines()]
+
+    assert len(lines) == 3
+    assert '11111' in lines
+    assert '22222' in lines
+    assert '33333' in lines
+
+
+def test_generate_archive_file_empty_tracker(tmp_path):
+    """测试 tracker 为空时的 archive 生成"""
+    # 准备
+    config = DownloadConfig()
+    wrapper = GalleryDLWrapper(config)
+
+    db_path = tmp_path / "test.db"
+    tracker = DownloadTracker(db_path)
+    temp_dir = tmp_path / "temp"
+
+    # 执行
+    archive_file = wrapper._generate_archive_file(tracker, temp_dir)
+
+    # 验证：空 tracker 应该返回 None
+    assert archive_file is None
