@@ -620,3 +620,44 @@ class GalleryDLWrapper:
             success_list=success_list,
             failed_errors=[],
         )
+
+    def _check_existing_downloads(
+        self,
+        dry_run_result: BatchDownloadResult,
+        tracker: 'DownloadTracker'
+    ) -> tuple[list[int], list[int]]:
+        """检查已下载作品，返回待下载和已跳过的作品 ID
+
+        Args:
+            dry_run_result: dry-run 预检查的结果
+            tracker: 下载历史追踪器
+
+        Returns:
+            tuple[list[int], list[int]]: (待下载作品ID列表, 已跳过作品ID列表)
+        """
+        if not dry_run_result.success_list:
+            logger.info("No works to check")
+            return [], []
+
+        all_ids = dry_run_result.success_list
+        logger.info(f"Checking {len(all_ids)} works against tracker...")
+
+        # 使用 tracker 查询待下载作品
+        # 注意：这里需要修改 tracker.get_pending_illusts() 以支持不指定 mode/date
+        # 暂时使用 is_downloaded() 逐个检查
+        pending_ids = []
+        skipped_ids = []
+
+        for illust_id in all_ids:
+            if tracker.is_downloaded(illust_id):
+                skipped_ids.append(illust_id)
+                logger.debug(f"Skipping already downloaded: {illust_id}")
+            else:
+                pending_ids.append(illust_id)
+
+        logger.info(
+            f"Dedup check result: {len(pending_ids)} pending, "
+            f"{len(skipped_ids)} already downloaded"
+        )
+
+        return pending_ids, skipped_ids
