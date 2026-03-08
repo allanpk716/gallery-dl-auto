@@ -855,18 +855,25 @@ class GalleryDLWrapper:
 
         logger.info(f"Recording {len(result.success_list)} downloads to tracker...")
 
+        # 将 actual_download_dir 转换为 Path 对象
+        download_dir = Path(result.actual_download_dir) if result.actual_download_dir else None
+
         recorded_count = 0
         for illust_id in result.success_list:
             try:
                 # 查找对应的文件路径
                 # 从 success_list 中的 ID 推断文件路径（简化版本）
                 # 实际文件路径格式：{output_dir}/pixiv/rankings/{mode}/{date}/{illust_id}_p0.jpg
-                file_path = result.actual_download_dir / f"{illust_id}_p0.jpg"
+                if not download_dir:
+                    logger.warning(f"No download directory for {illust_id}")
+                    continue
+
+                file_path = download_dir / f"{illust_id}_p0.jpg"
 
                 # 如果文件不存在，尝试其他扩展名
                 if not file_path.exists():
                     for ext in ['.png', '.jpg', '.gif']:
-                        test_path = result.actual_download_dir / f"{illust_id}_p0{ext}"
+                        test_path = download_dir / f"{illust_id}_p0{ext}"
                         if test_path.exists():
                             file_path = test_path
                             break
