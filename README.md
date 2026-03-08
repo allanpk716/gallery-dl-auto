@@ -249,6 +249,10 @@ graph LR
 ### 通用特性
 
 - ✨ **自动化 Token 管理**: 首次登录后自动捕获和刷新 token
+- ✅ **跨日去重**: 自动跳过已下载作品，节省带宽和存储
+  - 全局作品级去重：同一作品只下载一次
+  - 支持 `--force` 参数强制重新下载
+  - 详细的跳过统计和日志
 - 📥 **排行榜下载**: 支持多种排行榜类型（日榜、周榜、月榜等）
 - 📊 **完整元数据**: 获取作品标题、作者、标签、统计数据等
 - 🎯 **CLI 优先**: 命令行工具，易于集成和自动化
@@ -284,6 +288,57 @@ pixiv-downloader --json-output config
 # 检查 token 状态（JSON 输出）
 pixiv-downloader --json-output status
 ```
+
+---
+
+## 去重功能使用
+
+### 启用去重（默认）
+
+正常下载时，自动跳过已下载的作品，节省带宽和存储。
+
+```bash
+# 正常下载，自动跳过已下载作品
+pixiv-downloader download --type daily --date 2026-03-08 --format jsonl
+```
+
+### 强制重新下载
+
+使用 `--force` 参数忽略去重，重新下载所有作品。
+
+```bash
+# 使用 --force 忽略去重
+pixiv-downloader download --type daily --date 2026-03-08 --force --format jsonl
+```
+
+### 查看去重效果
+
+使用 `--verbose` 参数查看详细的跳过信息。
+
+```bash
+# 使用 --verbose 查看跳过的作品
+pixiv-downloader download --type daily --date 2026-03-08 --verbose
+```
+
+### 去重统计
+
+输出中包含去重统计信息：
+
+```json
+{
+  "success": true,
+  "total": 50,
+  "downloaded": 20,
+  "skipped": 30,
+  "failed": 0
+}
+```
+
+**工作原理：**
+- 两阶段下载策略：先 dry-run 预检查，再实际下载
+- 使用 SQLite 数据库记录所有已下载作品
+- 全局作品级去重（基于 illust_id）
+- 跨日期去重：同一作品在任何排行榜中只下载一次
 
 ---
 
@@ -363,6 +418,7 @@ pre-commit run --all-files
 - [x] Phase 7: 错误处理与健壮性 ✅
 - [x] Phase 8: 用户体验优化 ✅
 - [x] Phase 9: AI 优先优化 ✅ (JSONL 输出、--json-help、--json-output)
+- [x] Phase 10: 跨日去重 ✅ (全局作品级去重、--force 参数)
 
 ---
 
