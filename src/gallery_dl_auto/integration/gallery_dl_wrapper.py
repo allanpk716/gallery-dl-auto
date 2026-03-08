@@ -720,3 +720,60 @@ class GalleryDLWrapper:
         except Exception as e:
             logger.warning(f"Failed to generate archive file: {e}, deduplication disabled")
             return None
+
+    def _record_downloads(
+        self,
+        result: BatchDownloadResult,
+        tracker: 'DownloadTracker',
+        mode: str,
+        date: str
+    ) -> None:
+        """记录下载成功的作品到 tracker
+
+        Args:
+            result: 下载结果
+            tracker: 下载历史追踪器
+            mode: 排行榜模式
+            date: 日期字符串
+        """
+        if not result.success_list:
+            logger.debug("No successful downloads to record")
+            return
+
+        logger.info(f"Recording {len(result.success_list)} downloads to tracker...")
+
+        recorded_count = 0
+        for illust_id in result.success_list:
+            try:
+                # 查找对应的文件路径
+                # 从 success_list 中的 ID 推断文件路径（简化版本）
+                # 实际文件路径格式：{output_dir}/pixiv/rankings/{mode}/{date}/{illust_id}_p0.jpg
+                file_path = result.actual_download_dir / f"{illust_id}_p0.jpg"
+
+                # 如果文件不存在，尝试其他扩展名
+                if not file_path.exists():
+                    for ext in ['.png', '.jpg', '.gif']:
+                        test_path = result.actual_download_dir / f"{illust_id}_p0{ext}"
+                        if test_path.exists():
+                            file_path = test_path
+                            break
+
+                # 获取文件大小（如果文件存在）
+                file_size = None
+                if file_path.exists():
+                    file_size = file_path.stat().st_size
+
+                # 记录到 tracker
+                tracker.record_download(
+                    illust_id=illust_id,
+                    file_path=file_path,
+                    mode=mode,
+                    date=date,
+                    file_size=file_size
+                )
+                recorded_count += 1
+
+            except Exception as e:
+                logger.warning(f"Failed to record download for {illust_id}: {e}")
+
+        logger.info(f"Recorded {recorded_count}/{len(result.success_list)} downloads to tracker")
