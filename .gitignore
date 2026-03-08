@@ -44,3 +44,4 @@ htmlcov/
 # Project specific
 tmp/
 .coverage
+/pixiv-downloads/pixiv/rankings
