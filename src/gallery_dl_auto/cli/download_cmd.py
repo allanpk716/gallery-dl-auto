@@ -135,6 +135,12 @@ def handle_interrupt(signum, frame):
     default="json",
     help="Output format: json (human-readable with indentation) or jsonl (compact single-line, for LLM agents)",
 )
+@click.option(
+    "--force",
+    is_flag=True,
+    default=False,
+    help="强制重新下载所有作品（忽略去重）",
+)
 @click.pass_obj
 def download(
     config: DictConfig,
@@ -151,7 +157,8 @@ def download(
     offset: int,
     dry_run: bool,
     engine: str,
-    format: str
+    format: str,
+    force: bool,
 ) -> None:
     """Download Pixiv ranking images
 
@@ -257,6 +264,7 @@ def download(
             offset=offset,
             dry_run=dry_run,
             format=format,
+            force=force,
         )
     else:
         # 使用 internal 引擎 (旧版)
@@ -289,6 +297,7 @@ def _download_with_gallery_dl(
     offset: int,
     dry_run: bool,
     format: str,
+    force: bool,
 ) -> None:
     """使用 gallery-dl 引擎下载
 
@@ -305,6 +314,7 @@ def _download_with_gallery_dl(
         offset: 跳过前 N 个作品
         dry_run: 预览模式
         format: 输出格式 (json/jsonl)
+        force: 强制重新下载（忽略去重）
     """
     from gallery_dl_auto.integration.gallery_dl_wrapper import GalleryDLWrapper
 
