@@ -335,9 +335,13 @@ def _download_with_gallery_dl(
     # 执行下载
     output_dir = Path(output)
 
-    # 强制重新下载提示
-    if force:
-        logger.info("强制模式已启用：将重新下载所有作品（忽略去重）")
+    # 初始化 tracker（仅在非 --force 模式下启用去重）
+    tracker = None
+    if not force:
+        tracker = DownloadTracker(get_download_db_path())
+        logger.info("Deduplication enabled (use --force to disable)")
+    else:
+        logger.info("Force mode: deduplication disabled")
 
     result = wrapper.download_ranking(
         mode=mode,
@@ -348,7 +352,7 @@ def _download_with_gallery_dl(
         offset=offset,
         dry_run=dry_run,
         verbose=verbose,
-        force=force,
+        tracker=tracker,  # 传递 tracker，不是 force
     )
 
     # 输出 JSON 结果
