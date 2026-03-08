@@ -21,7 +21,7 @@ from gallery_dl_auto.models.error_response import BatchDownloadResult, Structure
 from gallery_dl_auto.utils.error_codes import ErrorCode
 
 if TYPE_CHECKING:
-    from gallery_dl_auto.history.download_tracker import DownloadTracker
+    from gallery_dl_auto.download.download_tracker import DownloadTracker
 
 logger = logging.getLogger("gallery_dl_auto")
 
