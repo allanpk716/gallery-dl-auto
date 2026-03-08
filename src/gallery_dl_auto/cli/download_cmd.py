@@ -334,6 +334,11 @@ def _download_with_gallery_dl(
 
     # 执行下载
     output_dir = Path(output)
+
+    # 强制重新下载提示
+    if force:
+        logger.info("强制模式已启用：将重新下载所有作品（忽略去重）")
+
     result = wrapper.download_ranking(
         mode=mode,
         date=date,
@@ -343,6 +348,7 @@ def _download_with_gallery_dl(
         offset=offset,
         dry_run=dry_run,
         verbose=verbose,
+        force=force,
     )
 
     # 输出 JSON 结果
