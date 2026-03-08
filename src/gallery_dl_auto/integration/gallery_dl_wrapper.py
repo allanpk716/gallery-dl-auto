@@ -10,7 +10,7 @@ import sys
 import tempfile
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from gallery_dl_auto.auth.token_storage import get_default_token_storage
 from gallery_dl_auto.config.download_config import DownloadConfig
@@ -19,6 +19,9 @@ from gallery_dl_auto.core.mode_manager import ModeManager
 from gallery_dl_auto.integration.token_bridge import TokenBridge
 from gallery_dl_auto.models.error_response import BatchDownloadResult, StructuredError
 from gallery_dl_auto.utils.error_codes import ErrorCode
+
+if TYPE_CHECKING:
+    from gallery_dl_auto.history.download_tracker import DownloadTracker
 
 logger = logging.getLogger("gallery_dl_auto")
 
@@ -74,6 +77,7 @@ class GalleryDLWrapper:
         offset: int = 0,
         dry_run: bool = False,
         verbose: bool = False,
+        tracker: Optional['DownloadTracker'] = None,
     ) -> BatchDownloadResult:
         """下载排行榜
 
@@ -86,6 +90,7 @@ class GalleryDLWrapper:
             offset: 跳过前 N 个作品
             dry_run: 预览模式,只获取信息不下载
             verbose: 详细输出模式
+            tracker: 下载历史追踪器（可选，用于去重）
 
         Returns:
             BatchDownloadResult: 下载结果
