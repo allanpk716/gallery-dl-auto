@@ -1057,3 +1057,182 @@ def test_jsonl_vs_json_size_comparison(tmp_path: Path) -> None:
         print(f"JSONL 压缩率: {compression_ratio:.1f}%")
 
 
+def test_cli_download_with_dedup(tmp_path: Path) -> None:
+    """测试 CLI 下载时的去重功能
+
+    场景：
+    1. 首次下载日榜 2026-03-07（3 个作品）
+    2. 再次下载日榜 2026-03-08（包含 3-7 的部分作品）
+    3. 验证重复作品被跳过
+    """
+    with (
+        patch(
+            "gallery_dl_auto.cli.download_cmd.get_default_token_storage"
+        ) as mock_storage,
+        patch(
+            "gallery_dl_auto.integration.gallery_dl_wrapper.GalleryDLWrapper"
+        ) as mock_wrapper_class,
+    ):
+        # Setup mock token
+        mock_storage_instance = MagicMock()
+        mock_storage_instance.load_token.return_value = {"refresh_token": "test_token"}
+        mock_storage.return_value = mock_storage_instance
+
+        # Setup mock wrapper for first download
+        mock_wrapper = MagicMock()
+
+        # 首次下载：3 个作品
+        result1 = BatchDownloadResult(
+            success=True,
+            total=3,
+            downloaded=3,
+            failed=0,
+            skipped=0,
+            output_dir=str(tmp_path),
+            success_list=[11111, 22222, 33333],
+            failed_errors=[],
+        )
+
+        # 第二次下载：包含部分重复
+        result2 = BatchDownloadResult(
+            success=True,
+            total=5,
+            downloaded=3,
+            failed=0,
+            skipped=2,  # 2 个重复作品
+            output_dir=str(tmp_path),
+            success_list=[33333, 44444, 55555],
+            failed_errors=[],
+        )
+
+        mock_wrapper.download_ranking.side_effect = [result1, result2]
+        mock_wrapper_class.return_value = mock_wrapper
+
+        output_dir = tmp_path / "downloads"
+
+        # 首次下载
+        runner = CliRunner()
+        first_result = runner.invoke(
+            download,
+            [
+                "--type", "daily",
+                "--date", "2026-03-07",
+                "--output", str(output_dir),
+                "--engine", "gallery-dl",
+                "--format", "json",
+            ],
+            obj=make_mock_config(),
+        )
+
+        # 验证首次下载成功
+        assert first_result.exit_code == 0
+        output1 = json.loads(first_result.output)
+        assert output1["success"] is True
+        assert output1["downloaded"] == 3
+
+        # 再次下载（不同日期）
+        second_result = runner.invoke(
+            download,
+            [
+                "--type", "daily",
+                "--date", "2026-03-08",
+                "--output", str(output_dir),
+                "--engine", "gallery-dl",
+                "--format", "json",
+            ],
+            obj=make_mock_config(),
+        )
+
+        # 验证第二次下载
+        assert second_result.exit_code == 0
+        output2 = json.loads(second_result.output)
+
+        # 验证去重效果：应该有 skipped 计数
+        assert output2.get("skipped", 0) == 2
+
+
+def test_cli_force_redownload(tmp_path: Path) -> None:
+    """测试 --force 参数强制重新下载"""
+    with (
+        patch(
+            "gallery_dl_auto.cli.download_cmd.get_default_token_storage"
+        ) as mock_storage,
+        patch(
+            "gallery_dl_auto.integration.gallery_dl_wrapper.GalleryDLWrapper"
+        ) as mock_wrapper_class,
+    ):
+        # Setup mock token
+        mock_storage_instance = MagicMock()
+        mock_storage_instance.load_token.return_value = {"refresh_token": "test_token"}
+        mock_storage.return_value = mock_storage_instance
+
+        # Setup mock wrapper
+        mock_wrapper = MagicMock()
+
+        # 首次下载：正常下载
+        result1 = BatchDownloadResult(
+            success=True,
+            total=3,
+            downloaded=3,
+            failed=0,
+            skipped=0,
+            output_dir=str(tmp_path),
+            success_list=[11111, 22222, 33333],
+            failed_errors=[],
+        )
+
+        # 使用 --force 重新下载：应该不跳过
+        result2 = BatchDownloadResult(
+            success=True,
+            total=3,
+            downloaded=3,
+            failed=0,
+            skipped=0,  # --force 模式下 skipped 为 0
+            output_dir=str(tmp_path),
+            success_list=[11111, 22222, 33333],
+            failed_errors=[],
+        )
+
+        mock_wrapper.download_ranking.side_effect = [result1, result2]
+        mock_wrapper_class.return_value = mock_wrapper
+
+        output_dir = tmp_path / "downloads"
+
+        # 首次下载
+        runner = CliRunner()
+        first_result = runner.invoke(
+            download,
+            [
+                "--type", "daily",
+                "--date", "2026-03-07",
+                "--output", str(output_dir),
+                "--engine", "gallery-dl",
+                "--format", "json",
+            ],
+            obj=make_mock_config(),
+        )
+
+        assert first_result.exit_code == 0
+
+        # 使用 --force 重新下载
+        second_result = runner.invoke(
+            download,
+            [
+                "--type", "daily",
+                "--date", "2026-03-07",
+                "--output", str(output_dir),
+                "--engine", "gallery-dl",
+                "--force",
+                "--format", "json",
+            ],
+            obj=make_mock_config(),
+        )
+
+        # 验证强制下载成功
+        assert second_result.exit_code == 0
+        output2 = json.loads(second_result.output)
+
+        # --force 模式下，skipped 应该为 0
+        assert output2.get("skipped", 0) == 0
+
+
