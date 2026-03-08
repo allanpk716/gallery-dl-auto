@@ -333,7 +333,7 @@ class GalleryDLWrapper:
         return cmd, config_file
 
     def _create_temp_config(
-        self, refresh_token: str, output_dir: Path, path_template: Optional[str]
+        self, refresh_token: str, output_dir: Path, path_template: Optional[str], archive_file: Optional[Path] = None
     ) -> Path:
         """创建临时 gallery-dl 配置文件
 
@@ -341,6 +341,7 @@ class GalleryDLWrapper:
             refresh_token: refresh token
             output_dir: 下载目录
             path_template: 路径模板
+            archive_file: archive 文件路径（可选，用于去重）
 
         Returns:
             Path: 临时配置文件路径
@@ -357,6 +358,11 @@ class GalleryDLWrapper:
             },
             "base-directory": str(output_dir),  # 设置基础目录
         }
+
+        # 添加 archive 配置（如果提供）
+        if archive_file:
+            config["extractor"]["pixiv"]["archive"] = str(archive_file)
+            logger.debug(f"Archive enabled: {archive_file}")
 
         # 创建临时文件
         temp_file = tempfile.NamedTemporaryFile(
