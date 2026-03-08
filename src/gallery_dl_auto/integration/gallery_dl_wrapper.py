@@ -138,11 +138,92 @@ class GalleryDLWrapper:
         # 转换为绝对路径
         actual_download_path = actual_download_path.resolve()
 
+        # 如果提供了 tracker 且不是 dry_run，执行两阶段下载
+        use_dedup = tracker is not None and not dry_run
+
+        if use_dedup:
+            logger.info("Deduplication enabled: will check existing downloads first")
+
         # 3. 执行命令
         temp_config_file = None
+        archive_file = None
+        all_ids = []
+        skipped_ids = []
+
         try:
-            # 构建命令和临时配置文件
-            cmd, temp_config_file = self._build_command(
+            # 阶段 1: 如果启用去重，先执行 dry-run 检查
+            if use_dedup:
+                logger.info("Phase 1: Checking existing downloads (dry-run)...")
+
+                # 执行 dry-run 获取作品列表
+                dry_run_cmd, temp_config_file = self._build_command(
+                    url=url,
+                    refresh_token=refresh_token,
+                    output_dir=output_dir,
+                    path_template=path_template,
+                    limit=limit,
+                    offset=offset,
+                    dry_run=True,  # 强制 dry-run
+                    verbose=verbose,
+                )
+
+                logger.debug(f"Dry-run command: {' '.join(dry_run_cmd)}")
+
+                dry_run_result = subprocess.run(
+                    dry_run_cmd,
+                    capture_output=True,
+                    text=True,
+                    timeout=300,  # 5 分钟超时
+                )
+
+                if dry_run_result.returncode != 0:
+                    logger.error(f"Dry-run failed: {dry_run_result.stderr}")
+                    # 降级：不使用去重，继续正常下载
+                    logger.warning("Deduplication disabled due to dry-run failure")
+                    use_dedup = False
+                else:
+                    # 解析 dry-run 结果
+                    dry_run_batch_result = self._parse_result(
+                        dry_run_result, True, output_dir, limit, offset, actual_download_path
+                    )
+
+                    # 检查已下载作品
+                    all_ids = dry_run_batch_result.success_list
+                    pending_ids, skipped_ids = self._check_existing_downloads(
+                        dry_run_batch_result, tracker
+                    )
+
+                    # 如果全部已下载，直接返回成功
+                    if not pending_ids:
+                        logger.info("All works already downloaded, skipping actual download")
+                        return BatchDownloadResult(
+                            success=True,
+                            total=len(all_ids),
+                            downloaded=0,
+                            failed=0,
+                            skipped=len(skipped_ids),
+                            output_dir=str(output_dir),
+                            actual_download_dir=str(actual_download_path),
+                            success_list=[],
+                            failed_errors=[],
+                        )
+
+                    logger.info(f"Will download {len(pending_ids)} new works")
+
+            # 阶段 2: 生成 archive 文件（如果启用去重）
+            if use_dedup:
+                logger.info("Phase 2: Generating archive file...")
+                temp_dir = Path.home() / ".gallery-dl-auto" / "temp"
+                archive_file = self._generate_archive_file(tracker, temp_dir)
+
+                if not archive_file:
+                    logger.warning("Archive generation failed, deduplication disabled")
+                    use_dedup = False
+
+            # 阶段 3: 执行实际下载
+            logger.info("Phase 3: Executing download..." if use_dedup else "Executing download...")
+
+            cmd, temp_config_file_new = self._build_command(
                 url=url,
                 refresh_token=refresh_token,
                 output_dir=output_dir,
@@ -151,7 +232,17 @@ class GalleryDLWrapper:
                 offset=offset,
                 dry_run=dry_run,
                 verbose=verbose,
+                archive_file=archive_file,  # 传递 archive 文件
             )
+
+            # 如果之前已经有 temp_config_file，先删除
+            if temp_config_file and temp_config_file.exists():
+                try:
+                    temp_config_file.unlink()
+                except OSError:
+                    pass
+
+            temp_config_file = temp_config_file_new
 
             logger.info(f"执行 gallery-dl 命令: {' '.join(cmd)}")
 
@@ -168,8 +259,28 @@ class GalleryDLWrapper:
             if result.stderr:
                 logger.debug(f"gallery-dl stderr: {result.stderr[:500]}")
 
-            # 5. 解析结果
-            return self._parse_result(result, dry_run, output_dir, limit, offset, actual_download_path)
+            # 阶段 4: 解析结果
+            batch_result = self._parse_result(result, dry_run, output_dir, limit, offset, actual_download_path)
+
+            # 阶段 5: 记录下载到 tracker（仅在实际下载成功后）
+            if use_dedup and not dry_run and batch_result.success_list:
+                logger.info("Phase 4: Recording downloads to tracker...")
+                self._record_downloads(batch_result, tracker, mode, actual_date)
+
+            # 添加去重统计信息
+            if use_dedup and skipped_ids:
+                batch_result.skipped = len(skipped_ids)
+                batch_result.total = len(all_ids) if all_ids else batch_result.total
+
+                # 添加 dedup_stats（需要修改 BatchDownloadResult 模型）
+                # 这里先记录日志
+                logger.info(
+                    f"Dedup stats: checked={batch_result.total}, "
+                    f"already_exists={len(skipped_ids)}, "
+                    f"new_downloads={batch_result.downloaded}"
+                )
+
+            return batch_result
 
         except subprocess.TimeoutExpired:
             return BatchDownloadResult(
@@ -273,6 +384,7 @@ class GalleryDLWrapper:
         offset: int,
         dry_run: bool,
         verbose: bool,
+        archive_file: Optional[Path] = None,
     ) -> tuple[list[str], Path]:
         """构建 gallery-dl 命令
 
@@ -285,12 +397,13 @@ class GalleryDLWrapper:
             offset: 跳过前 N 个作品
             dry_run: 预览模式
             verbose: 详细输出模式
+            archive_file: archive 文件路径（可选，用于去重）
 
         Returns:
             tuple[list[str], Path]: 命令参数列表和临时配置文件路径
         """
         # 创建临时配置文件
-        config_file = self._create_temp_config(refresh_token, output_dir, path_template)
+        config_file = self._create_temp_config(refresh_token, output_dir, path_template, archive_file)
 
         cmd = ["gallery-dl"]
 
