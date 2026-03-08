@@ -185,3 +185,73 @@ def test_generate_archive_file_empty_tracker(tmp_path):
 
     # 验证：空 tracker 应该返回 None
     assert archive_file is None
+
+
+def test_record_downloads(tmp_path):
+    """测试记录下载到 tracker"""
+    # 准备
+    config = DownloadConfig()
+    wrapper = GalleryDLWrapper(config)
+
+    db_path = tmp_path / "test.db"
+    tracker = DownloadTracker(db_path)
+
+    # 创建模拟的下载结果
+    download_dir = tmp_path / "downloads"
+    download_dir.mkdir()
+
+    # 创建模拟的下载文件
+    for illust_id in [11111, 22222]:
+        file_path = download_dir / f"{illust_id}_p0.jpg"
+        file_path.write_text("fake image data")
+
+    result = BatchDownloadResult(
+        success=True,
+        total=2,
+        downloaded=2,
+        failed=0,
+        skipped=0,
+        output_dir=str(tmp_path),
+        actual_download_dir=str(download_dir),
+        success_list=[11111, 22222],
+        failed_errors=[],
+    )
+
+    # 执行
+    wrapper._record_downloads(result, tracker, "day", "2026-03-08")
+
+    # 验证：tracker 中应该有记录
+    assert tracker.is_downloaded(11111)
+    assert tracker.is_downloaded(22222)
+
+
+def test_record_downloads_with_missing_files(tmp_path):
+    """测试记录下载时文件不存在的情况"""
+    # 准备
+    config = DownloadConfig()
+    wrapper = GalleryDLWrapper(config)
+
+    db_path = tmp_path / "test.db"
+    tracker = DownloadTracker(db_path)
+
+    download_dir = tmp_path / "downloads"
+    download_dir.mkdir()
+
+    result = BatchDownloadResult(
+        success=True,
+        total=2,
+        downloaded=2,
+        failed=0,
+        skipped=0,
+        output_dir=str(tmp_path),
+        actual_download_dir=str(download_dir),
+        success_list=[11111, 22222],
+        failed_errors=[],
+    )
+
+    # 执行（文件不存在，但不应失败）
+    wrapper._record_downloads(result, tracker, "day", "2026-03-08")
+
+    # 验证：仍然应该记录到 tracker（即使文件不存在）
+    assert tracker.is_downloaded(11111)
+    assert tracker.is_downloaded(22222)
