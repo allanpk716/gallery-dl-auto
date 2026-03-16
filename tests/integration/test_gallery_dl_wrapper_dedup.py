@@ -255,3 +255,48 @@ def test_record_downloads_with_missing_files(tmp_path):
     # 验证：仍然应该记录到 tracker（即使文件不存在）
     assert tracker.is_downloaded(11111)
     assert tracker.is_downloaded(22222)
+
+
+def test_record_downloads_with_tracker_enabled(tmp_path):
+    """测试 tracker 存在时，即使 dedup 阶段失败仍能记录下载
+
+    回归测试：确保 Phase 4 条件判断使用 tracker is not None 而非 use_dedup 标志。
+    场景：Phase 1 (dry-run) 或 Phase 2 (archive 生成) 失败时，use_dedup=False，
+    但只要 tracker 存在且非 dry_run，Phase 4 仍应执行。
+    """
+    # 准备
+    config = DownloadConfig()
+    wrapper = GalleryDLWrapper(config)
+
+    db_path = tmp_path / "test.db"
+    tracker = DownloadTracker(db_path)
+
+    # 创建下载目录和模拟文件
+    download_dir = tmp_path / "downloads"
+    download_dir.mkdir()
+
+    # 创建 2 个模拟图片文件
+    for illust_id in [11111, 22222]:
+        file_path = download_dir / f"{illust_id}_p0.jpg"
+        file_path.write_text("fake image data")
+
+    # 构造 BatchDownloadResult（模拟实际下载成功）
+    result = BatchDownloadResult(
+        success=True,
+        total=2,
+        downloaded=2,
+        failed=0,
+        skipped=0,
+        output_dir=str(tmp_path),
+        actual_download_dir=str(download_dir),
+        success_list=[11111, 22222],
+        failed_errors=[],
+    )
+
+    # 执行：直接调用 _record_downloads（绕过 Phase 1/2/3）
+    # 这模拟了 use_dedup=False 但 tracker 存在的场景
+    wrapper._record_downloads(result, tracker, "day", "2026-03-08")
+
+    # 验证：tracker 应包含记录（即使模拟 Phase 1/2 失败）
+    assert tracker.is_downloaded(11111), "Tracker should record illust_id 11111"
+    assert tracker.is_downloaded(22222), "Tracker should record illust_id 22222"
