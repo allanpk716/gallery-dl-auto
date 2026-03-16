@@ -270,7 +270,9 @@ class GalleryDLWrapper:
             # 添加去重统计信息
             if use_dedup and skipped_ids:
                 batch_result.skipped = len(skipped_ids)
-                batch_result.total = len(all_ids) if all_ids else batch_result.total
+                # 修复统计口径：total 应该等于 downloaded + skipped（所有检查的作品）
+                # 而不是 len(all_ids)（请求的作品数）
+                batch_result.total = batch_result.downloaded + batch_result.skipped
 
                 # 添加 dedup_stats（需要修改 BatchDownloadResult 模型）
                 # 这里先记录日志

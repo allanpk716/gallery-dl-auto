@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "C:\WorkSpace\gallery-dl-auto\batch_download.py", line 8, in <module>
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+                                  ^^^^^^^^^^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'buffer'
