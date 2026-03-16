@@ -16,7 +16,7 @@ Bug 修复与功能验证。
 
 ### Verification
 
-- [ ] **VERI-01**: 跨日去重功能已完整实现并正常工作
+- [x] **VERI-01**: 跨日去重功能已完整实现并正常工作
   - 验证：检查 `docs/requirements/cross-day-dedup.md` 需求完成度
   - 测试：运行集成测试确保跨日去重功能正常
   - 关闭：功能完整则关闭 GitHub issue #1
@@ -36,7 +36,7 @@ Bug 修复与功能验证。
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | BUG-01 | Phase 11 | Complete |
-| VERI-01 | Phase 11 | Pending |
+| VERI-01 | Phase 11 | Complete |
 
 **Coverage:**
 - v1.3 requirements: 2 total
