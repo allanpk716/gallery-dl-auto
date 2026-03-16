@@ -1,0 +1,48 @@
+# Requirements: gallery-dl-auto v1.3
+
+**Defined:** 2026-03-16
+**Core Value:** 自动化获取 Pixiv refresh token 并下载排行榜内容
+
+## v1.3 Requirements
+
+Bug 修复与功能验证。
+
+### Bug Fixes
+
+- [ ] **BUG-01**: 程序在首次下载后正确将下载记录写入 tracker DB
+  - 问题：当前 `use_dedup` 标志逻辑导致 Phase 4 永远不执行
+  - 修复：将条件判断从 `if use_dedup` 改为 `if tracker is not None`
+  - 验证：首次下载后 DB 不为空，第二次下载能正确识别已下载作品
+
+### Verification
+
+- [ ] **VERI-01**: 跨日去重功能已完整实现并正常工作
+  - 验证：检查 `docs/requirements/cross-day-dedup.md` 需求完成度
+  - 测试：运行集成测试确保跨日去重功能正常
+  - 关闭：功能完整则关闭 GitHub issue #1
+
+## Out of Scope
+
+| Feature | Reason |
+|---------|--------|
+| 新增功能开发 | 本里程碑专注于 bug 修复和功能验证 |
+| 性能优化 | 非当前 bug 相关，推迟到后续里程碑 |
+| UI/UX 改进 | 非当前 bug 相关，推迟到后续里程碑 |
+
+## Traceability
+
+哪个阶段覆盖哪些需求。将在路线图创建时更新。
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| BUG-01 | Phase 11 | Pending |
+| VERI-01 | Phase 11 | Pending |
+
+**Coverage:**
+- v1.3 requirements: 2 total
+- Mapped to phases: 2
+- Unmapped: 0 ✓
+
+---
+*Requirements defined: 2026-03-16*
+*Last updated: 2026-03-16 after initial definition*
