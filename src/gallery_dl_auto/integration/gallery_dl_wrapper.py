@@ -704,6 +704,7 @@ class GalleryDLWrapper:
             BatchDownloadResult: 下载结果
         """
         success_list = []
+        seen_ids = set()  # 用于去重
 
         for line in stdout.strip().split("\n"):
             line = line.strip()
@@ -720,8 +721,14 @@ class GalleryDLWrapper:
                 if "_p" in filename:
                     illust_id_str = filename.split("_p")[0]
                     illust_id = int(illust_id_str)
-                    success_list.append(illust_id)
-                    logger.debug(f"下载成功: {illust_id} -> {line}")
+
+                    # 去重：只添加第一次出现的作品 ID
+                    if illust_id not in seen_ids:
+                        seen_ids.add(illust_id)
+                        success_list.append(illust_id)
+                        logger.debug(f"下载成功: {illust_id} -> {line}")
+                    else:
+                        logger.debug(f"跳过重复的作品 ID: {illust_id} ({line})")
                 else:
                     logger.warning(f"无法解析文件名: {line}")
             except (ValueError, IndexError) as e:
