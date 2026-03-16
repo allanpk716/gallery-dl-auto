@@ -10,14 +10,11 @@
 
 **自动化获取 Pixiv refresh token 并下载排行榜内容** — 用户首次手动登录后,程序自动捕获、存储和更新 refresh token,无需手动从浏览器开发者工具中复制,实现真正的自动化下载流程。
 
-## Current Milestone: v1.3 Bug 修复与验证
+## Current Milestone: Planning Next Milestone
 
-**Goal:** 修复 GitHub issue #2（去重功能失效 bug），验证 issue #1（跨日去重功能）是否完整实现
+**Status:** v1.3 Bug 修复与验证 completed (2026-03-16)
 
-**Target features:**
-- 修复 tracker DB 记录逻辑，确保下载结果正确写入数据库
-- 验证跨日去重功能完整可用
-- 确保增量下载功能正常工作
+**Next milestone:** TBD — use `/gsd:new-milestone` to start planning
 
 ## Requirements
 
@@ -45,6 +42,14 @@
 - ✓ 开发者可以参考 Python 和命令行调用示例代码 — v1.2
 - ✓ 开发者可以根据完整退出码文档 (22 个错误码) 判断执行状态 — v1.2
 - ✓ CLI API 稳定性经过验证 (JSON 输出、退出码、集成测试) — v1.2
+
+**v1.3 Bug 修复与验证:**
+- ✓ Tracker DB 记录 bug 已修复 — Phase 4 条件从 `if use_dedup` 改为 `if tracker is not None`，确保即使 Phase 1/2 失败时 tracker 仍能记录下载 — v1.3
+- ✓ 跨日去重功能验证完成 — cross-day-dedup.md 的 4 个验收标准全部满足 — v1.3
+
+**v1.3 Bug 修复与验证:**
+- ✓ Tracker DB 记录 bug 已修复 — Phase 4 条件从 `if use_dedup` 改为 `if tracker is not None`，确保即使 Phase 1/2 失败时 tracker 仍能记录下载 — v1.3
+- ✓ 跨日去重功能验证完成 — cross-day-dedup.md 的 4 个验收标准全部满足 — v1.3
 
 ### Active
 
@@ -89,6 +94,14 @@
 - **完整实现:** CLI API 接口 (--json-help, --quiet, --json-output)、INTEGRATION.md 文档 (831 行)、API 验证
 - **第三方集成:** 完整的 CLI API 接口,支持命令发现、静默执行、JSON 输出、退出码判断
 
+**Shipped v1.3** (2026-03-16) with:
+- **~4350 lines of Python code** in src/ (~45 lines added from v1.2)
+- **Tech stack:** Same as v1.2, bug fixes only
+- **20/20 dedup-related tests passing** (100%) — All dedup and tracker tests pass
+- **100% requirements coverage** — 2/2 v1.3 requirements satisfied
+- **关键修复:** Tracker DB 记录 bug (line 266 修复)、边界回归测试、GitHub issues 关闭
+- **功能验证:** 跨日去重功能完整可用，4/4 验收标准满足
+
 **Key Technical Decisions:**
 - 直接使用 PixivPy3 而非封装 gallery-dl (更直接的 API 控制)
 - OAuth PKCE 认证流程 + Playwright 自动化
@@ -128,6 +141,8 @@
 | CLI API 全局参数 | --json-help, --quiet, --json-output 支持第三方工具集成 | ✓ Good — 命令发现、静默执行、JSON 输出 |
 | INTEGRATION.md 文档 | 831 行完整集成指南,包含示例和退出码参考 | ✓ Good — 降低第三方集成门槛 |
 | API 验证和 Gap Closure | 5 轮 gap closure 修复关键问题,确保 API 稳定性 | ✓ Good — 修复退出码回归,验证 JSON 输出 |
+| Tracker DB 条件解耦 | Phase 4 条件从 use_dedup 改为 tracker is not None | ✓ Good — 确保即使 Phase 1/2 失败时 tracker 仍能记录下载 |
+| 边界回归测试 | 添加 test_record_downloads_with_tracker_enabled | ✓ Good — 防止 bug 再次发生 |
 
 ---
-*Last updated: 2026-03-16 after starting v1.3 milestone*
+*Last updated: 2026-03-16 after v1.3 milestone completion*

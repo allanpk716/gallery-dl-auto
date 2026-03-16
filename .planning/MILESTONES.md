@@ -1,5 +1,27 @@
 # Milestones
 
+## v1.3 Bug 修复与验证 (Shipped: 2026-03-16)
+
+**Phases completed:** 1 phase (11), 2 plans, 5 tasks
+
+**Key accomplishments:**
+- Tracker DB 记录 bug 修复 — 将 Phase 4 条件从 `if use_dedup` 改为 `if tracker is not None`，解耦与 Phase 1/2/3 的依赖，确保即使早期阶段失败时 tracker 仍能正确记录下载
+- 边界回归测试 — 新增 `test_record_downloads_with_tracker_enabled` 测试用例，验证 tracker 记录逻辑不受 use_dedup 标志影响，防止 bug 再次发生
+- 跨日去重功能验证 — 验证 cross-day-dedup.md 的 4 个验收标准全部满足（首次下载记录 DB、第二次跳过、日志显示跳过、--force 强制重下载）
+- GitHub Issues 关闭 — 通过 commit message 关键字 "Fixes #1, Closes #2" 自动关闭 issues #1 (功能验证) 和 #2 (bug 报告)
+
+**Quality metrics:**
+- Requirements: 2/2 (100%)
+- Tests: 20/20 dedup and tracker tests (100%)
+- Bug fix: Single-line change (line 266 in gallery_dl_wrapper.py)
+- No regressions: All existing tests continue to pass
+
+**Tech debt:**
+- 无技术债务
+- Phase 11 实现干净，仅 1 行核心修复 + 1 个回归测试
+
+---
+
 ## v1.0 Pixiv 排行榜下载器初始版本 (Shipped: 2026-02-25)
 
 **Phases completed:** 7 phases (01, 02, 02.1, 03, 04, 05, 06), 19 plans
