@@ -10,12 +10,14 @@
 
 **自动化获取 Pixiv refresh token 并下载排行榜内容** — 用户首次手动登录后,程序自动捕获、存储和更新 refresh token,无需手动从浏览器开发者工具中复制,实现真正的自动化下载流程。
 
-## Current Milestone: Planning v1.3
+## Current Milestone: v1.3 Bug 修复与验证
 
-**Previous:** v1.2 第三方 CLI 集成优化 (completed 2026-02-28)
-**Status:** Ready to plan next milestone
+**Goal:** 修复 GitHub issue #2（去重功能失效 bug），验证 issue #1（跨日去重功能）是否完整实现
 
-Use `/gsd:new-milestone` to start planning.
+**Target features:**
+- 修复 tracker DB 记录逻辑，确保下载结果正确写入数据库
+- 验证跨日去重功能完整可用
+- 确保增量下载功能正常工作
 
 ## Requirements
 
@@ -128,4 +130,4 @@ Use `/gsd:new-milestone` to start planning.
 | API 验证和 Gap Closure | 5 轮 gap closure 修复关键问题,确保 API 稳定性 | ✓ Good — 修复退出码回归,验证 JSON 输出 |
 
 ---
-*Last updated: 2026-02-28 after v1.2 milestone completion*
+*Last updated: 2026-03-16 after starting v1.3 milestone*
