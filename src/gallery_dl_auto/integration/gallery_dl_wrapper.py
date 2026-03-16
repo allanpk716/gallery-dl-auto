@@ -410,22 +410,21 @@ class GalleryDLWrapper:
         # 使用临时配置文件
         cmd.extend(["--config", str(config_file)])
 
-        # 范围限制：
-        # 注意：gallery-dl 的 --range 限制的是图片页面，不是作品数量
-        # 所以我们需要请求更多页面来确保获得足够的作品
-        # 这里使用一个保守的估算：每个作品平均 1.5 页
-        if limit is not None or offset > 0:
-            # 计算需要请求的页面范围
-            start_page = offset + 1
-            if limit:
-                # 请求 limit * 2 的页面，确保获得足够的作品
-                # （假设最坏情况每个作品有 2 页）
-                end_page = offset + limit * 2
-            else:
-                end_page = ""  # 无上限
-
-            cmd.extend(["--range", f"{start_page}-{end_page}"])
-            logger.debug(f"请求图片页面范围: {start_page}-{end_page}")
+        # 范围限制：使用 gallery-dl 的 max-posts 选项精确控制作品数量
+        # 注意：max-posts 限制的是作品（posts）数量，不是图片页面数
+        # 这比 --range 更精确，因为 --range 是基于图片页面数
+        if limit is not None:
+            # 如果有 offset，需要请求 offset + limit 个作品
+            # 然后在解析输出时切片
+            total_posts = offset + limit
+            cmd.extend(["-o", f"max-posts={total_posts}"])
+            logger.debug(f"限制下载作品数量: max-posts={total_posts} (offset={offset}, limit={limit})")
+        elif offset > 0:
+            # 只有 offset 没有 limit：请求足够多的作品（offset + 一个大数）
+            # 然后在解析输出时跳过前 offset 个
+            # 使用一个保守的大数（1000）作为上限
+            cmd.extend(["-o", f"max-posts={offset + 1000}"])
+            logger.debug(f"从第 {offset + 1} 个作品开始下载（无上限）")
 
         # 预览模式
         if dry_run:
@@ -559,7 +558,7 @@ class GalleryDLWrapper:
             return self._parse_dry_run_output(result.stdout, output_dir, limit, offset, actual_download_path)
         else:
             # 正常下载模式：解析 ID 列表
-            return self._parse_download_output(result.stdout, output_dir, actual_download_path)
+            return self._parse_download_output(result.stdout, output_dir, actual_download_path, limit, offset)
 
     def _parse_dry_run_output(
         self, stdout: str, output_dir: Path, limit: Optional[int] = None, offset: int = 0, actual_download_path: Optional[Path] = None
@@ -691,7 +690,7 @@ class GalleryDLWrapper:
             )
 
     def _parse_download_output(
-        self, stdout: str, output_dir: Path, actual_download_path: Optional[Path] = None
+        self, stdout: str, output_dir: Path, actual_download_path: Optional[Path] = None, limit: Optional[int] = None, offset: int = 0
     ) -> BatchDownloadResult:
         """解析正常下载输出（文件路径）
 
@@ -699,6 +698,8 @@ class GalleryDLWrapper:
             stdout: gallery-dl 标准输出（每行一个文件路径）
             output_dir: 输出目录
             actual_download_path: 实际下载路径
+            limit: 最多返回的作品数量
+            offset: 跳过前 N 个作品
 
         Returns:
             BatchDownloadResult: 下载结果
@@ -733,6 +734,15 @@ class GalleryDLWrapper:
                     logger.warning(f"无法解析文件名: {line}")
             except (ValueError, IndexError) as e:
                 logger.warning(f"无法解析文件路径: {line}, 错误: {e}")
+
+        # 应用 offset 和 limit 限制（在去重后切片）
+        if offset > 0:
+            success_list = success_list[offset:]
+            logger.debug(f"应用 offset={offset}，剩余 {len(success_list)} 个作品")
+
+        if limit is not None and limit > 0:
+            success_list = success_list[:limit]
+            logger.debug(f"应用 limit={limit}，最终 {len(success_list)} 个作品")
 
         downloaded = len(success_list)
 
