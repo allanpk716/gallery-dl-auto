@@ -5,12 +5,14 @@
 - ✅ **v1.0 Pixiv 排行榜下载器初始版本** - Phases 1-6 (shipped 2026-02-25)
 - ✅ **v1.1 Polish** - Phase 7 (shipped 2026-02-25)
 - ✅ **v1.2 第三方 CLI 集成优化** - Phases 8-10 (shipped 2026-02-28)
+- 🔄 **v1.3 Bug 修复与验证** - Phase 11 (in progress)
 
 ## Phases
 
 **Phase Numbering:**
 - Integer phases (1-7): v1.0 和 v1.1 已完成阶段
 - Integer phases (8-10): v1.2 已完成阶段
+- Integer phases (11+): v1.3 及后续里程碑
 
 <details>
 <summary>✅ v1.0 Pixiv 排行榜下载器初始版本 (Phases 1-6) - SHIPPED 2026-02-25</summary>
@@ -142,6 +144,23 @@ Plans:
 
 </details>
 
+<details>
+<summary>🔄 v1.3 Bug 修复与验证 (Phase 11) - IN PROGRESS</summary>
+
+### Phase 11: Bug Fix & Verification
+**Goal**: 程序能够正确记录下载历史并实现跨日去重
+**Depends on**: Phase 10 (v1.2 CLI 集成优化已完成)
+**Requirements**: BUG-01, VERI-01
+**Success Criteria**:
+1. 用户首次下载排行榜后，tracker DB 包含所有下载作品的记录
+2. 用户第二次下载相同排行榜时，程序跳过已下载作品（从 DB 读取）
+3. 用户下载不同日期的排行榜时，程序正确识别新作品（跨日去重）
+4. GitHub issue #1 和 #2 被关闭（验证完成）
+
+**Plans**: TBD
+
+</details>
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -158,8 +177,22 @@ Plans:
 | 8.1. CLI API 增强 | v1.2 | 3/3 | Complete | 2026-02-26 |
 | 9. 集成文档 | v1.2 | 3/3 | Complete | 2026-02-26 |
 | 10. API 验证 | v1.2 | 10/10 | Complete | 2026-02-28 |
+| 11. Bug Fix & Verification | v1.3 | 0/0 | Not started | - |
+
+---
+
+## Coverage Validation
+
+**v1.3 Requirements Coverage:**
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| BUG-01 | Phase 11 | Pending |
+| VERI-01 | Phase 11 | Pending |
+
+**Coverage:** 2/2 (100%) ✓
 
 ---
 
 *Roadmap created: 2026-02-25*
-*Last updated: 2026-02-28 for v1.2 milestone completion*
+*Last updated: 2026-03-16 for v1.3 milestone start*
