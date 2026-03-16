@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Bug 修复与验证
-status: planning
-last_updated: "2026-03-16T15:18:00Z"
+status: in_progress
+last_updated: "2026-03-16T08:56:48Z"
 progress:
   total_phases: 1
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 2
+  completed_plans: 1
   current_phase: 11
 ---
 
@@ -18,16 +18,16 @@ progress:
 ## Current Position
 
 **Phase:** Phase 11 - Bug Fix & Verification
-**Plan:** None assigned yet
-**Status:** Roadmap created, ready for planning
-**Last activity:** 2026-03-16 — Roadmap created for v1.3
+**Plan:** 11-02 (修复 tracker DB 记录逻辑)
+**Status:** Plan 11-01 complete, ready for 11-02
+**Last activity:** 2026-03-16 — Plan 11-01 complete: tracker recording bug fixed
 
 ## Progress
 
 ```
-v1.3 Progress: [░░░░░░░░░░] 0%
-├─ Phase 11: [░░░░░░░░░░] 0% (Not started)
-   ├─ BUG-01: Pending
+v1.3 Progress: [█████░░░░░] 50%
+├─ Phase 11: [█████░░░░░] 50% (1/2 plans complete)
+   ├─ BUG-01: ✅ Complete
    └─ VERI-01: Pending
 ```
 
@@ -46,15 +46,18 @@ v1.3 Progress: [░░░░░░░░░░] 0%
 
 ### Key Decisions
 - Single phase for both bug fix and verification (simple scope, tight coupling)
+- Phase 4 condition uses `tracker is not None` instead of `use_dedup` flag (decoupled from Phase 1/2/3)
+- Added regression test to prevent bug recurrence
 
 ### Active TODOs
-- [ ] 修复 tracker DB 记录逻辑（BUG-01）— 修改 `use_dedup` 条件判断
+- [x] 修复 tracker DB 记录逻辑（BUG-01）— Phase 4 条件从 use_dedup 改为 tracker is not None
 - [ ] 验证跨日去重功能（VERI-01）— 检查文档、运行测试、关闭 issues
 
 ### Technical Notes
 - **Bug root cause:** `use_dedup` flag logic prevents Phase 4 execution
-- **Fix location:** Change condition from `if use_dedup` to `if tracker is not None`
-- **Verification scope:** Check `docs/requirements/cross-day-dedup.md` completion
+- **Fix applied:** Changed condition from `if use_dedup` to `if tracker is not None` (line 266)
+- **Verification:** Added regression test `test_record_downloads_with_tracker_enabled`
+- **Test results:** 8/8 dedup tests pass, 20/20 related tests pass
 
 ### Blockers
 - (None yet)
@@ -80,13 +83,13 @@ v1.3 Progress: [░░░░░░░░░░] 0%
 
 ## Session Continuity
 
-**Next Steps:** Run `/gsd:plan-phase 11` to create execution plan
+**Next Steps:** Run `/gsd:execute-phase 11-02` to verify cross-day dedup functionality
 
 **Quick Context for Resume:**
-- Simple bug fix milestone with 2 requirements
-- Single phase covering both fix and verification
-- Expected quick turnaround (1 phase, likely 1-2 plans)
-- Focus: Fix tracker DB recording logic and verify cross-day dedup
+- Plan 11-01 complete: tracker recording bug fixed
+- Changed line 266: `if tracker is not None and not dry_run`
+- All tests pass: 8/8 dedup tests, 20/20 related tests
+- Next: Verify VERI-01 (cross-day dedup) and close GitHub issues #1 and #2
 
 ---
 

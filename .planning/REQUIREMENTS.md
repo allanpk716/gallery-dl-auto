@@ -9,7 +9,7 @@ Bug 修复与功能验证。
 
 ### Bug Fixes
 
-- [ ] **BUG-01**: 程序在首次下载后正确将下载记录写入 tracker DB
+- [x] **BUG-01**: 程序在首次下载后正确将下载记录写入 tracker DB
   - 问题：当前 `use_dedup` 标志逻辑导致 Phase 4 永远不执行
   - 修复：将条件判断从 `if use_dedup` 改为 `if tracker is not None`
   - 验证：首次下载后 DB 不为空，第二次下载能正确识别已下载作品
@@ -35,7 +35,7 @@ Bug 修复与功能验证。
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BUG-01 | Phase 11 | Pending |
+| BUG-01 | Phase 11 | Complete |
 | VERI-01 | Phase 11 | Pending |
 
 **Coverage:**

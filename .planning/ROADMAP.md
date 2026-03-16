@@ -181,7 +181,7 @@ Plans:
 | 8.1. CLI API 增强 | v1.2 | 3/3 | Complete | 2026-02-26 |
 | 9. 集成文档 | v1.2 | 3/3 | Complete | 2026-02-26 |
 | 10. API 验证 | v1.2 | 10/10 | Complete | 2026-02-28 |
-| 11. Bug Fix & Verification | v1.3 | 0/2 | Not started | - |
+| 11. Bug Fix & Verification | 1/2 | In Progress|  | - |
 
 ---
 
