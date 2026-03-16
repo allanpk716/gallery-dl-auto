@@ -157,7 +157,11 @@ Plans:
 3. 用户下载不同日期的排行榜时，程序正确识别新作品（跨日去重）
 4. GitHub issue #1 和 #2 被关闭（验证完成）
 
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 11-01: 修复 tracker DB 记录逻辑 (BUG-01) — 修改 Phase 4 条件判断 + 添加边界测试用例
+- [ ] 11-02: 验证跨日去重功能 (VERI-01) — 验证 cross-day-dedup.md 验收标准 + 关闭 GitHub issues
 
 </details>
 
@@ -177,7 +181,7 @@ Plans:
 | 8.1. CLI API 增强 | v1.2 | 3/3 | Complete | 2026-02-26 |
 | 9. 集成文档 | v1.2 | 3/3 | Complete | 2026-02-26 |
 | 10. API 验证 | v1.2 | 10/10 | Complete | 2026-02-28 |
-| 11. Bug Fix & Verification | v1.3 | 0/0 | Not started | - |
+| 11. Bug Fix & Verification | v1.3 | 0/2 | Not started | - |
 
 ---
 
@@ -187,12 +191,12 @@ Plans:
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BUG-01 | Phase 11 | Pending |
-| VERI-01 | Phase 11 | Pending |
+| BUG-01 | Phase 11 (Plan 11-01) | Pending |
+| VERI-01 | Phase 11 (Plan 11-02) | Pending |
 
 **Coverage:** 2/2 (100%) ✓
 
 ---
 
 *Roadmap created: 2026-02-25*
-*Last updated: 2026-03-16 for v1.3 milestone start*
+*Last updated: 2026-03-16 for Phase 11 planning*
