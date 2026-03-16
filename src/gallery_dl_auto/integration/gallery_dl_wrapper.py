@@ -263,7 +263,7 @@ class GalleryDLWrapper:
             batch_result = self._parse_result(result, dry_run, output_dir, limit, offset, actual_download_path)
 
             # 阶段 5: 记录下载到 tracker（仅在实际下载成功后）
-            if use_dedup and not dry_run and batch_result.success_list:
+            if tracker is not None and not dry_run and batch_result.success_list:
                 logger.info("Phase 4: Recording downloads to tracker...")
                 self._record_downloads(batch_result, tracker, mode, actual_date)
 
